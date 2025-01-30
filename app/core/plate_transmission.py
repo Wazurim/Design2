@@ -1,99 +1,80 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 
-# Parameters
-total_time = 500  # Total simulation time [s]
-lx = 120e-3  # Length [m]
-thickness = 1.5e-3  # Thickness [m]
 
-nx = 120  # Number of elements in x
+class Plate:
+    def __init__(self, total_time=500, lx=120e-3, thickness=1.5e-3, nx=120, k=205, rho=2700,
+                 cp=900, h_convection=20, power_in=1.5, ambient_temp=25.0):
+        # Parameters
+        self.total_time = total_time  # Total simulation time [s]
+        self.lx = lx  # Length [m]
+        self.thickness = thickness  # Thickness [m]
 
-# Material properties (for Aluminum)
-k = 205  # Thermal conductivity [W/m·K]
-rho = 2700  # Density [kg/m^3]
-cp = 900  # Specific heat capacity [J/kg·K]
-alpha = k / (rho * cp)  # Thermal diffusivity [m^2/s]
+        self.nx = nx  # Number of elements in x
 
-h_convection = 20  # Convection coefficient [W/m^2·K]
-# h_conv = 0  # Uncomment to remove convection
+        # Material properties (for Aluminum)
+        self.k = k  # Thermal conductivity [W/m·K]
+        self.rho = rho  # Density [kg/m^3]
+        self.cp = cp  # Specific heat capacity [J/kg·K]
+        self.alpha = k / (rho * cp)  # Thermal diffusivity [m^2/s]
 
-# Calculated parameters
-dx = lx / nx  # Discretization step in x [m]
-dy = thickness  # Thickness in y [m]
-dz = thickness  # Thickness in z [m]
+        self.h_convection = h_convection  # Convection coefficient [W/m^2·K]
+        # h_conv = 0  # Uncomment to remove convection
 
-dt = dx**2 / (8 * alpha)  # Time step [s]
-nt = round(total_time / dt)  # Number of time iterations
+        # Calculated parameters
+        self.dx = lx / nx  # Discretization step in x [m]
+        self.dy = thickness  # Thickness in y [m]
+        self.dz = thickness  # Thickness in z [m]
 
-# Geometry parameters
-area_ends = dy * dz  # End area [m^2]
-area_sides = dx * dz  # Side area [m^2]
-area_top = dx * dy  # Top/bottom area [m^2]
-volume = dx * dy * dz  # Element volume [m^3]
+        self.dt = self.dx**2 / (8 * self.alpha)  # Time step [s]
+        self.nt = round(self.total_time / self.dt)  # Number of time iterations
 
-times = np.arange(0, nt) * dt  # Time vector
-position = np.arange(0, nx) * dx  # Position vector
+        # Geometry parameters
+        self.area_ends = self.dy * self.dz  # End area [m^2]
+        self.area_sides = self.dx * self.dz  # Side area [m^2]
+        self.area_top = self.dx * self.dy  # Top/bottom area [m^2]
+        self.volume = self.dx * self.dy * self.dz  # Element volume [m^3]
 
-# Power input
-power_in = 1.5  # Power [W]
-p_in_location_x = int(round((lx / 4) / dx))  # Location of power input
-powers = np.zeros(nx)
-powers[p_in_location_x] = power_in  # Power applied to one element
+        self.times = np.arange(0, self.nt) * self.dt  # Time vector
+        self.positions = np.arange(0, self.nx) * self.dx  # Position vector
 
-# Initial conditions
-ambient_temp = 273 + 25.0  # Ambient temperature [K]
-temps = np.full(nx, ambient_temp)  # Initial temperature of all elements
+        # Power input
+        self.power_in = power_in  # Power [W]
+        self.p_in_location_x = int(round((lx / 4) / self.dx))  # Location of power input
+        self.powers = np.zeros(nx)
+        self.powers[self.p_in_location_x] = power_in  # Power applied to one element
 
-temp_location_x = int(round((lx / 2) / dx))  # Location of localized heat
-thermistance_location_x = int(round((3 * lx / 4) / dx))  # Location of temperature measurement
+        # Initial conditions
+        self.ambient_temp = 273.0 + ambient_temp  # Ambient temperature [K]
+        self.temps = np.full(nx, self.ambient_temp)  # Initial temperature of all elements
 
-# Preallocate vectors
-energy_added = np.zeros(nt)
-energy_loss = np.zeros(nt)
-thermistances = np.zeros(nt)
-new_temps = np.zeros_like(temps)
+        self.temp_location_x = int(round((lx / 2) / self.dx))  # Location of localized heat
+        self.thermistance_location_x = int(round((3 * lx / 4) / self.dx))  # Location of temperature measurement
 
-# Set up the 2D plot
-fig, ax = plt.subplots(figsize=(10, 6))
-line, = ax.plot(position * 1e3, temps - 273, label="Temperature")
-ax.set_xlabel("Position [mm]")
-ax.set_ylabel("Temperature [°C]")
-ax.set_title("Temperature Distribution Over Time")
-ax.grid()
-ax.legend()
+        # Preallocate vectors
+        self.energy_added = np.zeros(self.nt)
+        self.energy_loss = np.zeros(self.nt)
+        self.thermistances = np.zeros(self.nt)
+        self.new_temps = np.zeros_like(self.temps)
+        
+        
+    
+    def update_plate(self):
+        for i in range(self.nx):
+            self.new_temps[i] = self.temps[i]
 
-def update_plot(frame:int, ax: plt.Axes):
-    global temps, new_temps
+            if i == 0:  # First element
+                self.new_temps[i] += self.dt / (self.rho * self.cp) * self.k * (self.temps[i + 1] - self.temps[i]) / self.dx**2
+                self.new_temps[i] += self.dt / (self.rho * self.cp) * self.h_convection * (self.ambient_temp - self.temps[i]) * self.area_ends / self.volume
 
-    for i in range(nx):
-        new_temps[i] = temps[i]
+            elif i == self.nx - 1:  # Last element
+                self.new_temps[i] += self.dt / (self.rho * self.cp) * self.k * (self.temps[i - 1] - self.temps[i]) / self.dx**2
+                self.new_temps[i] += self.dt / (self.rho * self.cp) * self.h_convection * (self.ambient_temp - self.temps[i]) * self.area_ends / self.volume
 
-        if i == 0:  # First element
-            new_temps[i] += dt / (rho * cp) * k * (temps[i + 1] - temps[i]) / dx**2
-            new_temps[i] += dt / (rho * cp) * h_convection * (ambient_temp - temps[i]) * area_ends / volume
+            else:  # Interior elements
+                self.new_temps[i] += self.dt / (self.rho * self.cp) * self.k * (self.temps[i + 1] - 2 * self.temps[i] + self.temps[i - 1]) / self.dx**2
 
-        elif i == nx - 1:  # Last element
-            new_temps[i] += dt / (rho * cp) * k * (temps[i - 1] - temps[i]) / dx**2
-            new_temps[i] += dt / (rho * cp) * h_convection * (ambient_temp - temps[i]) * area_ends / volume
+            self.new_temps[i] += self.dt / (self.rho * self.cp) * self.powers[i] / self.volume
+            self.new_temps[i] += self.dt / (self.rho * self.cp) * self.h_convection * (self.ambient_temp - self.temps[i]) * 2 * self.area_sides / self.volume
+            self.new_temps[i] += self.dt / (self.rho * self.cp) * self.h_convection * (self.ambient_temp - self.temps[i]) * 2 * self.area_top / self.volume
 
-        else:  # Interior elements
-            new_temps[i] += dt / (rho * cp) * k * (temps[i + 1] - 2 * temps[i] + temps[i - 1]) / dx**2
-
-        new_temps[i] += dt / (rho * cp) * powers[i] / volume
-        new_temps[i] += dt / (rho * cp) * h_convection * (ambient_temp - temps[i]) * 2 * area_sides / volume
-        new_temps[i] += dt / (rho * cp) * h_convection * (ambient_temp - temps[i]) * 2 * area_top / volume
-
-    temps[:] = new_temps
-    ax.clear()
-    line, = ax.plot(position * 1e3, temps - 273, label="Temperature")
-    ax.set_xlabel("Position [mm]")
-    ax.set_ylabel("Temperature [°C]")
-    ax.set_title("Temperature Distribution Over Time")
-    ax.grid()
-    ax.relim()
-    ax.autoscale_view(True, True, True)
-    return line,
-
-ani = FuncAnimation(fig, update_plot, fargs=(ax,), interval=10, cache_frame_data=False)
-plt.show()
+        self.temps[:] = self.new_temps
