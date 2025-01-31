@@ -15,35 +15,29 @@ stop = False
 def update_plate():
     global last_time, stop
     while not stop:
-        
-        # Update the plate
-        # while(plate.current_time < last_time + 1):
         plate.update_plate_with_numpy()
 
-        # last_time += 1
-        # print(last_time)
 
 # The parameter frame is unused, but is necessary.
 def update_plot(frame:int, ax: plt.Axes):
-    # global stop
-    # while not stop:
-        # t1 = threading.Thread(target=update_plate)
-        # t1.start()
-    # update_plate()
-    # plate.update_plate()
-    
     # Refresh the graph
     ax.clear()
-    line = ax.plot_surface(plate.X * 1e3,  plate.Z * 1e3, plate.temps - 273, label="Temperature", cmap=cm.plasma)
+    line = ax.plot_surface(plate.X * 1e3,  plate.Y * 1e3, plate.temps - 273, label="Temperature", cmap=cm.plasma)
     ax.set_xlabel("Position [mm]")
     ax.set_ylabel("Position [mm]")
     ax.set_zlabel("Temperature [°C]")
     ax.set_title("Temperature Distribution Over Time")
     return line,
 
+# Start thread to calculate the propagation
 t1 = threading.Thread(target=update_plate)
 t1.start()
-ani = FuncAnimation(fig, update_plot, fargs=(ax,), interval=1000, cache_frame_data=True, save_count=10)
+
+# This updates the graph every interval (ms)
+# The higher the interval, the less frames you will see, but the faster the simulation will be able to update itself
+ani = FuncAnimation(fig, update_plot, fargs=(ax,), interval=100, cache_frame_data=True, save_count=10)
+
 plt.show()
+
 stop = True
 t1.join()
