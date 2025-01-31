@@ -4,8 +4,10 @@ from plate_transmission import Plate
 
 plate = Plate()
 
-# Set up the 2D plot
-fig, ax = plt.subplots(figsize=(10, 6))
+# Set up the 3D plot
+# fig, ax = plt.subplots(figsize=(10, 6))
+fig = plt.figure()
+ax = plt.axes(projection='3d')
 
 # The parameter frame is unused, but is necessary.
 def update_plot(frame:int, ax: plt.Axes):
@@ -14,9 +16,11 @@ def update_plot(frame:int, ax: plt.Axes):
     
     # Refresh the graph
     ax.clear()
-    line, = ax.plot(plate.positions * 1e3, plate.temps - 273, label="Temperature")
+    # print(plate.temps[10,10])
+    line = ax.plot_surface(plate.X * 1e3,  plate.Z * 1e3, plate.temps - 273, label="Temperature")
     ax.set_xlabel("Position [mm]")
-    ax.set_ylabel("Temperature [°C]")
+    ax.set_ylabel("Position [mm]")
+    ax.set_zlabel("Temperature [°C]")
     ax.set_title("Temperature Distribution Over Time")
     ax.grid()
     ax.relim()
