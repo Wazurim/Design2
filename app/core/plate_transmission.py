@@ -67,30 +67,6 @@ class Plate:
         self.dt_conv = self.dt / (self.rho * self.cp) * self.h_convection
         self.current_time = 0
         
-    def update_plate_with_numpy_optimized(self):
-        # Copy temperatures to avoid modifying the array while computing
-        self.new_temps[:] = self.temps[:]
-        
-        # Compute temperature differences using NumPy slicing
-        dT_x = (np.roll(self.temps, shift=-1, axis=0) + np.roll(self.temps, shift=1, axis=0) - 2 * self.temps) / self.dx**2
-        dT_z = (np.roll(self.temps, shift=-1, axis=1) + np.roll(self.temps, shift=1, axis=1) - 2 * self.temps) / self.dz**2
-        
-        # Apply diffusion and power updates in one step
-        self.new_temps += self.dt_alpha * (dT_x + dT_z) + self.dt / (self.rho * self.cp) * self.powers / self.volume
-        
-        # Apply convection boundary conditions in a vectorized manner
-        conv_correction = self.dt_conv * (self.ambient_temp - self.temps) / self.volume
-        self.new_temps += conv_correction * (2 * self.area_top + self.area_sides * (np.arange(self.nx) == 0) + self.area_sides * (np.arange(self.nx) == self.nx-1) + self.area_ends * (np.arange(self.nz) == 0)[:, None] + self.area_ends * (np.arange(self.nz) == self.nz-1)[:, None])
-        
-        # Adjust boundary conditions directly without loops
-        self.new_temps[0, :] += self.dt_alpha * (self.temps[1, :] - self.temps[0, :]) / self.dx**2
-        self.new_temps[-1, :] += self.dt_alpha * (self.temps[-2, :] - self.temps[-1, :]) / self.dx**2
-        self.new_temps[:, 0] += self.dt_alpha * (self.temps[:, 1] - self.temps[:, 0]) / self.dz**2
-        self.new_temps[:, -1] += self.dt_alpha * (self.temps[:, -2] - self.temps[:, -1]) / self.dz**2
-        self.temps[:] = self.new_temps
-        self.current_time += self.dt
-        print(self.current_time)
-        
     
     def update_plate_with_numpy(self):
         # Copy temperatures to avoid modifying the array while computing
@@ -100,7 +76,8 @@ class Plate:
         dT_x = (np.roll(self.temps, shift=-1, axis=0) + np.roll(self.temps, shift=1, axis=0) - 2 * self.temps) / self.dx**2
         dT_z = (np.roll(self.temps, shift=-1, axis=1) + np.roll(self.temps, shift=1, axis=1) - 2 * self.temps) / self.dz**2
         
-        self.new_temps += self.dt_alpha * (dT_x + dT_z)
+        # Apply only inner propagation
+        self.new_temps[1:-1, 1:-1] += self.dt_alpha * (dT_x[1:-1, 1:-1] + dT_z[1:-1, 1:-1])
         
         # Apply convection boundary conditions
         self.new_temps += self.dt_conv * (self.ambient_temp - self.temps) * 2 * self.area_top / self.volume
