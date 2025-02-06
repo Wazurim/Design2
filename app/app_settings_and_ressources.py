@@ -22,6 +22,7 @@ BACKGROUND_COLOR = "#282c34"
 FONT_COLOR = "#F4F4F4"
 
 # Other UI-specific settings
+FONT_SIZE = 20
 DEFAULT_FONT = QFont("Arial", 12)
 BOLD_FONT = QFont("Arial", 12, QFont.Bold)
 TITLE_BUTTON_BAR_FONT = QFont("Arial", 14, QFont.Bold)
