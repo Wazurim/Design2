@@ -82,6 +82,9 @@ class AppController:
     def load_params(self):
         self.__load_params(self.main_window.cb_import.currentText())
 
+    def autosave(self):
+        self.__Config_autosave()
+
     def export_params(self):
         default = os.path.join(self.cwd, self.config_dir)
         file_path, _ = QFileDialog.getSaveFileName(

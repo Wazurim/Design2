@@ -169,6 +169,7 @@ class MainWindow(QMainWindow):
         self.zone_total_time.setToolTip("Total Time: DESCRIPTION")
         self.zone_total_time.setFont(res.BOLD_FONT)
         self.zone_total_time.setPlainText("")
+        self.zone_total_time.textChanged.connect(self.controller.autosave)
 
         ####
         self.text_lenght = QLabel(self)
@@ -182,6 +183,7 @@ class MainWindow(QMainWindow):
         self.zone_lenght.setToolTip("Lenght: DESCRIPTION")
         self.zone_lenght.setFont(res.BOLD_FONT)
         self.zone_lenght.setPlainText("")
+        self.zone_lenght.textChanged.connect(self.controller.autosave)
 
         ####
         self.text_Depth = QLabel(self)
@@ -195,6 +197,7 @@ class MainWindow(QMainWindow):
         self.zone_Depth.setToolTip("Depth: DESCRIPTION")
         self.zone_Depth.setFont(res.BOLD_FONT)
         self.zone_Depth.setPlainText("")
+        self.zone_Depth.textChanged.connect(self.controller.autosave)
 
         ####
         self.text_thick = QLabel(self)
@@ -208,6 +211,7 @@ class MainWindow(QMainWindow):
         self.zone_thick.setToolTip("Thickness: DESCRIPTION")
         self.zone_thick.setFont(res.BOLD_FONT)
         self.zone_thick.setPlainText("")
+        self.zone_thick.textChanged.connect(self.controller.autosave)
 
         ####
         self.text_nx = QLabel(self)
@@ -221,6 +225,7 @@ class MainWindow(QMainWindow):
         self.zone_nx.setToolTip("Number of elements x: DESCRIPTION")
         self.zone_nx.setFont(res.BOLD_FONT)
         self.zone_nx.setPlainText("")
+        self.zone_nx.textChanged.connect(self.controller.autosave)
 
         ####
         self.text_ny = QLabel(self)
@@ -234,6 +239,7 @@ class MainWindow(QMainWindow):
         self.zone_ny.setToolTip("Number of elements y: DESCRIPTION")
         self.zone_ny.setFont(res.BOLD_FONT)
         self.zone_ny.setPlainText("")
+        self.zone_ny.textChanged.connect(self.controller.autosave)
 
         
         ####
@@ -248,6 +254,7 @@ class MainWindow(QMainWindow):
         self.zone_k.setToolTip("Number of elements y: DESCRIPTION")
         self.zone_k.setFont(res.BOLD_FONT)
         self.zone_k.setPlainText("")
+        self.zone_k.textChanged.connect(self.controller.autosave)
         
         ####
         self.text_rho = QLabel(self)
@@ -261,6 +268,7 @@ class MainWindow(QMainWindow):
         self.zone_rho.setToolTip("Density: DESCRIPTION")
         self.zone_rho.setFont(res.BOLD_FONT)
         self.zone_rho.setPlainText("")
+        self.zone_rho.textChanged.connect(self.controller.autosave)
 
         ####
         self.text_cp = QLabel(self)
@@ -274,6 +282,7 @@ class MainWindow(QMainWindow):
         self.zone_cp.setToolTip("Heat capacity: DESCRIPTION")
         self.zone_cp.setFont(res.BOLD_FONT)
         self.zone_cp.setPlainText("")
+        self.zone_cp.textChanged.connect(self.controller.autosave)
 
         ####
         self.text_h = QLabel(self)
@@ -287,6 +296,7 @@ class MainWindow(QMainWindow):
         self.zone_h.setToolTip("Heat transfer: DESCRIPTION")
         self.zone_h.setFont(res.BOLD_FONT)
         self.zone_h.setPlainText("")
+        self.zone_h.textChanged.connect(self.controller.autosave)
 
         ####
         self.text_power_in = QLabel(self)
@@ -300,6 +310,7 @@ class MainWindow(QMainWindow):
         self.zone_power_in.setToolTip("Power input: DESCRIPTION")
         self.zone_power_in.setFont(res.BOLD_FONT)
         self.zone_power_in.setPlainText("")
+        self.zone_power_in.textChanged.connect(self.controller.autosave)
 
         ####
         self.text_ambient_temp = QLabel(self)
@@ -313,6 +324,7 @@ class MainWindow(QMainWindow):
         self.zone_ambient_temp.setToolTip("Ambient temp: DESCRIPTION")
         self.zone_ambient_temp.setFont(res.BOLD_FONT)
         self.zone_ambient_temp.setPlainText("")
+        self.zone_ambient_temp.textChanged.connect(self.controller.autosave)
         
         ####
         self.text_initial_temp = QLabel(self)
@@ -326,6 +338,7 @@ class MainWindow(QMainWindow):
         self.zone_initial_temp.setToolTip("Initial temp: DESCRIPTION")
         self.zone_initial_temp.setFont(res.BOLD_FONT)
         self.zone_initial_temp.setPlainText("")
+        self.zone_initial_temp.textChanged.connect(self.controller.autosave)
 
     def __initBtns(self):
         self.btn_start_simulation = QPushButton("START SIMULATION", self)
