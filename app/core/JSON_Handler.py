@@ -9,6 +9,7 @@ class JsonHandler:
         return os.path.exists(file_path)
 
     def read_json_file(self, file_path):
+        self.data ={}
         try:
             if self.__check_file_exists(file_path):
                 with open(file_path, 'r') as file:
@@ -28,7 +29,9 @@ class JsonHandler:
     
     def write_json_file(self, file_path, data):
         try:
-            with open(file_path, 'w') as file:
+            cwd = os.getcwd()
+            full_path = os.path.join(cwd, file_path)
+            with open(full_path, 'w') as file:
                 json.dump(data, file, indent=4)
             return True
         except Exception as e:

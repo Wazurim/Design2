@@ -18,7 +18,7 @@ class Plate:
         self.rho = rho  # Density [kg/m^3]
         self.cp = cp  # Specific heat capacity [J/kg·K]
         self.alpha = k / (rho * cp)  # Thermal diffusivity [m^2/s]
-        print(self.alpha)
+        #print(self.alpha)
 
         self.h_convection = h_convection  # Convection coefficient [W/m^2·K]
 
@@ -56,7 +56,7 @@ class Plate:
 
         # Initial conditions
         self.ambient_temp = 273.0 + ambient_temp  # Ambient temperature [K]
-        self.temps = np.full([nx, ny], self.ambient_temp + initial_plate_temp)  # Initial temperature of all elements in x
+        self.temps = np.full([nx, ny], self.ambient_temp + initial_plate_temp)  # Initial temperature of all elements in x #todo double check initial temp
 
         self.temp_location = (int(round((lx / 2) / self.dx)), int(round((ly / 2) / self.dy)))  # Location of localized heat
         self.thermistance_location = (int(round((3 * lx / 4) / self.dx)), int(round((3 * ly / 4) / self.dy)))  # Location of temperature measurement
@@ -98,7 +98,7 @@ class Plate:
         self.new_temps[:, -1] += self.dt_alpha * ((self.temps[:, -2] - self.temps[:, -1]) / self.dy**2)
         self.temps[:] = self.new_temps
         self.current_time += self.dt
-        print(self.current_time)
+        #print(self.current_time)
         
     
     def update_plate(self):
@@ -212,4 +212,4 @@ class Plate:
 
         self.temps[:] = self.new_temps
         self.current_time += self.dt
-        print(self.current_time)
+        #print(self.current_time)

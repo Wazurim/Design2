@@ -1,0 +1,17 @@
+{
+    "plate": {
+        "time": "1000",
+        "lenght": "12",
+        "depth": "12",
+        "tickness": "12",
+        "nx": "12",
+        "ny": "12",
+        "k": "12",
+        "rho": "",
+        "cp": "",
+        "h": "",
+        "power_in": "",
+        "ambient_temp": "",
+        "initial_temp": "12"
+    }
+}
