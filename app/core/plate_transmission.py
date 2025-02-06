@@ -2,8 +2,8 @@ import numpy as np
 
 
 class Plate:
-    def __init__(self, total_time=500, lx=120e-3, ly=120e-3, thickness=1.5e-3, nx=120, ny=120, k=205, rho=2700,
-                 cp=900, h_convection=20, power_in=1.5, ambient_temp=25.0, initial_plate_temp=0):
+    def __init__(self, total_time=500, lx=120e-3, ly=120e-3, thickness=1.5e-3, nx=120, ny=120, k=205, rho=2800,
+                 cp=880, h_convection=7, power_in=1.17, ambient_temp=25.0, initial_plate_temp=0):
         # Parameters
         self.total_time = total_time  # Total simulation time [s]
         self.lx = lx  # Length [m]
@@ -32,7 +32,7 @@ class Plate:
         self.nt = round(self.total_time / self.dt)  # Number of time iterations
 
         # Geometry parameters
-        #  y +--------------+       z ^   
+        #  y +--------------+       z ^
         #   /              /|         |  ↗ y
         #z +--------------+ +         | /
         #  |              |/          |/
@@ -43,7 +43,7 @@ class Plate:
         self.volume = self.dx * self.dy * self.dz  # Element volume [m^3]
 
         self.times = np.arange(0, self.nt) * self.dt  # Time vector
-        
+     
         x = np.arange(0, self.nx) * self.dx
         y = np.arange(0, self.ny) * self.dy
         self.X, self.Y = np.meshgrid(x, y)
@@ -66,19 +66,19 @@ class Plate:
         self.dt_alpha = self.dt / (self.rho * self.cp) * self.k
         self.dt_conv = self.dt / (self.rho * self.cp) * self.h_convection
         self.current_time = 0
-        
-    
+      
+
     def update_plate_with_numpy(self):
         # Copy temperatures to avoid modifying the array while computing
         self.new_temps[:] = self.temps[:]
-        
+
         # Compute interior updates using array slicing
         dT_x = (np.roll(self.temps, shift=-1, axis=0) + np.roll(self.temps, shift=1, axis=0) - 2 * self.temps) / self.dx**2
         dT_y = (np.roll(self.temps, shift=-1, axis=1) + np.roll(self.temps, shift=1, axis=1) - 2 * self.temps) / self.dy**2
-        
+
         # Apply only inner propagation
         self.new_temps[1:-1, 1:-1] += self.dt_alpha * (dT_x[1:-1, 1:-1] + dT_y[1:-1, 1:-1])
-        
+
         # Apply convection boundary conditions
         self.new_temps += self.dt_conv * (self.ambient_temp - self.temps) * 2 * self.area_top / self.volume
         
