@@ -3,7 +3,7 @@ import numpy as np
 
 class Plate:
     def __init__(self, total_time=500, lx=120e-3, ly=120e-3, thickness=1.5e-3, nx=120, ny=120, k=205, rho=2800,
-                 cp=880, h_convection=7, power_in=1.17, ambient_temp=25.0, initial_plate_temp=0):
+                 cp=890, h_convection=7, power_in=1.17, ambient_temp=25.0, initial_plate_temp=0):
         # Parameters
         self.total_time = total_time  # Total simulation time [s]
         self.lx = lx  # Length [m]
