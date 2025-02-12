@@ -6,15 +6,20 @@ plate = Plate()
 
 # Nombre de pas de simulation
 num_steps = 10000  # Ajuste selon tes besoins
+save_interval = 100  # Sauvegarde 1 donnée toutes les 1000 itérations
 
 # Stockage des résultats
 temps_list = []
 time_list = []
 
-for _ in range(num_steps):
+for step in range(num_steps):
     plate.update_plate_with_numpy()
-    temps_list.append(plate.temps.copy())  # Sauvegarde des températures
-    time_list.append(plate.current_time)   # Sauvegarde du temps actuel
+
+    # On enregistre seulement toutes les `save_interval` itérations
+    if step % save_interval == 0:
+        temps_list.append(plate.temps.copy())  # Sauvegarde des températures
+        time_list.append(plate.current_time)   # Sauvegarde du temps simulé
+print(f"Enregistrement à l'étape {step} / {num_steps}")
 
 # Conversion en tableaux numpy
 temps_array = np.array(temps_list)
@@ -24,6 +29,7 @@ time_array = np.array(time_list)
 np.savez_compressed("temperature_data.npz", temps=temps_array, time=time_array, X=plate.X, Y=plate.Y)
 
 print("Simulation terminée. Les données ont été enregistrées.")
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -54,7 +60,7 @@ def update_plot(frame):
     ax.set_title(f"Évolution de la température (t = {time[frame]:.2f}s)")
 
 # Création de l’animation
-ani = FuncAnimation(fig, update_plot, frames=range(0, len(time), 1000), interval=1) # On pourra ajuster interval selon nos besoins
+ani = FuncAnimation(fig, update_plot, frames=range(0, len(time), 1), interval=1) # On pourra ajuster interval selon nos besoins
 
 # Affichage de l’animation
 plt.show()
