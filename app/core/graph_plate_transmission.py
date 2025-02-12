@@ -24,8 +24,8 @@ def update_plot(frame:int, ax: plt.Axes):
     ax.clear()
     line = ax.plot_surface(plate.X * 1e3,  plate.Y * 1e3, plate.temps - 273, label="Temperature", cmap=cm.plasma)
     ax.text2D(-0.1, 0.9, f"Simulation Time : {plate.current_time}s", transform=ax.transAxes)
-    ax.set_xlabel("Position [mm]")
-    ax.set_ylabel("Position [mm]")
+    ax.set_xlabel("Position x [mm]")
+    ax.set_ylabel("Position y [mm]")
     ax.set_zlabel("Temperature [°C]")
     ax.set_title("Temperature Distribution Over Time")
     return line,

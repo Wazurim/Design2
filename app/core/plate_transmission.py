@@ -2,8 +2,10 @@ import numpy as np
 
 
 class Plate:
-    def __init__(self, total_time=500, lx=120e-3, ly=120e-3, thickness=1.5e-3, nx=120, ny=120, k=205, rho=2800,
-                 cp=890, h_convection=7, power_in=1.17, ambient_temp=25.0, initial_plate_temp=0):
+    def __init__(self, total_time=500, lx=120e-3, ly=120e-3, thickness=1.5e-3, nx=120, ny=120, k=205, rho=2700,
+                 cp=890, h_convection=7, power_in=1.17, ambient_temp=25.0, initial_plate_temp=0, position_heat_source=(30, 60), position_thermistance=(90, 60)):
+        #TODO: plug in position of thermistances, plug in facteur entre actuateur et plaque.
+
         # Parameters
         self.total_time = total_time  # Total simulation time [s]
         self.lx = lx  # Length [m]
@@ -50,7 +52,7 @@ class Plate:
 
         # Power input
         self.power_in = power_in  # Power [W]
-        self.p_in_location = (int(round((lx / 4) / self.dx)), int(round((ly / 2) / self.dx)))  # Location of power input (quarter of the length)
+        self.p_in_location = position_heat_source  # Location of power input (quarter of the length)
         self.powers = np.zeros([nx, ny])
         self.powers[self.p_in_location] = power_in  # Power applied to one element
 
@@ -58,8 +60,7 @@ class Plate:
         self.ambient_temp = 273.0 + ambient_temp  # Ambient temperature [K]
         self.temps = np.full([nx, ny], self.ambient_temp + initial_plate_temp)  # Initial temperature of all elements in x #todo double check initial temp
 
-        self.temp_location = (int(round((lx / 2) / self.dx)), int(round((ly / 2) / self.dy)))  # Location of localized heat
-        self.thermistance_location = (int(round((3 * lx / 4) / self.dx)), int(round((3 * ly / 4) / self.dy)))  # Location of temperature measurement
+        self.thermistance_location = position_heat_source  # Location of temperature measurement
 
         # Preallocate vectors
         self.new_temps = np.zeros_like(self.temps)
@@ -99,6 +100,7 @@ class Plate:
         self.temps[:] = self.new_temps
         self.current_time += self.dt
         #print(self.current_time)
+        return self.temps
         
     
     def update_plate(self):
