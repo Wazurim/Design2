@@ -4,9 +4,15 @@ from plate_transmission import Plate
 # Initialisation de la plaque
 plate = Plate()
 
-# Nombre de pas de simulation
-num_steps = 10000  # Ajuste selon tes besoins
-save_interval = 100  # Sauvegarde 1 donnée toutes les 1000 itérations
+# Définir le temps total de simulation (en secondes)
+total_time = 10  # à modifier selon les besoins
+
+# Calculer le nombre d'itérations basé sur dt
+num_steps = int(total_time / plate.dt)  # Nombre total d'itérations
+
+# Définir le ratio d'itérations à sauvegarder
+save_ratio = 0.1
+save_interval = max(1, int(num_steps * save_ratio))  # Nombre d'itérations entre chaque sauvegarde
 
 # Stockage des résultats
 temps_list = []
@@ -28,7 +34,9 @@ time_array = np.array(time_list)
 # Sauvegarde des données dans un fichier compressé
 np.savez_compressed("temperature_data.npz", temps=temps_array, time=time_array, X=plate.X, Y=plate.Y)
 
-print("Simulation terminée. Les données ont été enregistrées.")
+print(f"Simulation terminée. Temps total simulé : {total_time}s, Nombre total d'itérations : {num_steps}, "
+      f"Intervalle de sauvegarde : {save_interval}, Nombre de frames sauvegardées : {len(time_array)}")
+
 
 
 import numpy as np
