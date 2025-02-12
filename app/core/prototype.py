@@ -11,8 +11,8 @@ total_time = 10  # à modifier selon les besoins
 num_steps = int(total_time / plate.dt)  # Nombre total d'itérations
 
 # Définir le ratio d'itérations à sauvegarder
-save_ratio = 0.1
-save_interval = max(1, int(num_steps * save_ratio))  # Nombre d'itérations entre chaque sauvegarde
+save_ratio = 0.001
+save_interval = 1 / save_ratio   # Nombre d'itérations entre chaque sauvegarde
 
 # Stockage des résultats
 temps_list = []
