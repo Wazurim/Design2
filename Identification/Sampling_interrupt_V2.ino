@@ -25,6 +25,7 @@
 #define TIMER_TICKS (F_CPU / PRESCALER)
 #define TIMER_TICKS_PER_SECOND (TIMER_TICKS / DESIRED_FREQ)
 #define PWM_PIN 3
+#define CONTROL_PIN 7
 
 const uint16_t OCR1A_VALUE = (uint16_t)(TIMER_TICKS_PER_SECOND - 1);
 
@@ -37,6 +38,8 @@ volatile uint16_t adcRawValue = 0;
 
 
 ISR(TIMER1_COMPA_vect) {
+    PORTD |= (1 << PD7);
+    
     const float period = (float)(OCR1A_VALUE + 1) / (float)TIMER_TICKS;
     gInterruptCount++;  
     float currentTime = gInterruptCount * period; 
@@ -48,7 +51,7 @@ ISR(TIMER1_COMPA_vect) {
         newSampleFlag = true;
         lastSampleTime = currentTime;
     }
-
+    PORTD &= ~(1 << PD7);
 }
 
 ISR(ADC_vect) {
@@ -69,6 +72,8 @@ void setup() {
     ADCSRA |= (1 << ADSC);
 
     pinMode(PWM_PIN, OUTPUT);
+
+    pinMode(CONTROL_PIN, OUTPUT);
 
   // --- Timer1 Setup ---
     cli();  // deactive les interrupt
