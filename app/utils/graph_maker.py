@@ -21,16 +21,16 @@ def parse_tek_csv(filename):
 
             # Skip if row is too short or not numeric in the 3rd/4th columns
             # (Python lists are zero-indexed: col3 is row[3], col4 is row[4])
-            if len(row) < 5:
+            if len(row) < 1:
                 continue
 
             # row[3] (time) and row[4] (voltage) might be numeric if they're actual data
             # We'll attempt to convert them to float. If it fails, it's metadata.
             try:
-                if line == 1:
-                    time_init = float(row[3])
-                t = float(row[3]) - time_init
-                v = float(row[4])
+                if line == 3:
+                    time_init = float(row[0])
+                t = float(row[0]) - time_init
+                v = float(row[1])
                 time_values.append(t)
                 voltage_values.append(v)
             except ValueError:
@@ -40,19 +40,19 @@ def parse_tek_csv(filename):
     return time_values, voltage_values
 
 def main():
-    filename = 'tek_scope_data.csv'  # replace with your actual CSV file
+
 
     # Parse the CSV to get time and voltage
-    time_data, voltage_data = parse_tek_csv("F0000CH1.CSV")
+    time_data, voltage_data = parse_tek_csv("SDS00003.CSV")
 
     # Now plot it
     plt.figure(figsize=(8, 4))
     plt.plot(time_data, voltage_data)
-    plt.title('Oscilloscope Capture')
-    plt.xlabel('Time (s)')
+    plt.title("Peigne de Dirac de l'echantillonage")
+    plt.xlabel('Temps (s)')
     plt.ylabel('Voltage (V)')
     plt.grid(True)
-    plt.legend()
+    #plt.legend()
     plt.tight_layout()
     plt.show()
 

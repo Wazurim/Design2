@@ -20,11 +20,12 @@
 
 
 #define F_CPU 16000000UL  
-#define DESIRED_FREQ 10     
+#define DESIRED_FREQ 10
 #define PRESCALER 1024      
 #define TIMER_TICKS (F_CPU / PRESCALER)
 #define TIMER_TICKS_PER_SECOND (TIMER_TICKS / DESIRED_FREQ)
 #define PWM_PIN 3
+#define CONTROL_PIN 7
 
 const uint16_t OCR1A_VALUE = (uint16_t)(TIMER_TICKS_PER_SECOND - 1);
 
@@ -33,10 +34,17 @@ volatile float sampledValue = 0.0;
 volatile bool newSampleFlag = false;    //flag pour dire qu'il y a une nouvelle valeur qui doit etre sampler
 volatile float lastSampleTime = 0.0;    
 volatile uint16_t adcRawValue = 0;
+volatile bool pulseTriggerFlag = false; // Set in the ISR when a pulse is requested
+
+// Variables used for the extended pulse (handled in the main loop)
+bool pulseActive = false;
+unsigned long pulseStartTime = 0;
+unsigned int extendedPulseDuration = 5; // Desired pulse duration in milliseconds
 
 
 
 ISR(TIMER1_COMPA_vect) {
+        
     const float period = (float)(OCR1A_VALUE + 1) / (float)TIMER_TICKS;
     gInterruptCount++;  
     float currentTime = gInterruptCount * period; 
@@ -48,7 +56,7 @@ ISR(TIMER1_COMPA_vect) {
         newSampleFlag = true;
         lastSampleTime = currentTime;
     }
-
+    pulseTriggerFlag = true;
 }
 
 ISR(ADC_vect) {
@@ -63,6 +71,13 @@ void ADC_Init() {
     DIDR0 = 0x1F;         // Disable digital input buffers on ADC0-ADC4 to reduce power consumption
 }
 
+void triggerExtendedPulse(unsigned int duration) {
+    digitalWrite(CONTROL_PIN, HIGH);
+    pulseActive = true;
+    pulseStartTime = millis();
+    extendedPulseDuration = duration;
+}
+
 void setup() {
     Serial.begin(9600);
     ADC_Init();  
@@ -70,6 +85,9 @@ void setup() {
 
     pinMode(PWM_PIN, OUTPUT);
 
+    pinMode(CONTROL_PIN, OUTPUT);
+    digitalWrite(CONTROL_PIN, LOW);
+  
   // --- Timer1 Setup ---
     cli();  // deactive les interrupt
     TCCR1A = 0;
@@ -114,5 +132,15 @@ void loop() {
         Serial.println(pwmValue);
     }
 
-    delay(50);
+    if (pulseTriggerFlag) {
+        pulseTriggerFlag = false; // Clear the flag
+        // Call the function to start the extended pulse with a desired duration (in ms)
+        triggerExtendedPulse(5);  // For example, a 50 ms pulse
+    }
+    
+    // If a pulse is active and the desired duration has elapsed, turn the pulse off.
+    if (pulseActive && (millis() - pulseStartTime >= extendedPulseDuration)) {
+        digitalWrite(CONTROL_PIN, LOW);
+        pulseActive = false;
+    }
 }
