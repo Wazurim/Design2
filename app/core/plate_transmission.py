@@ -1,32 +1,31 @@
 import numpy as np
 
 
-class Plate:
-    def __init__(self, total_time=500, lx=120e-3, ly=120e-3, thickness=1.5e-3, nx=120, ny=120, k=205, rho=2700,
-                 cp=897, h_convection=7, power_in=1.17, ambient_temp=25.0, initial_plate_temp=0, position_heat_source=(30, 60), position_thermistance=(90, 60)):
+class Plate:#117.21, 61.6
+    def __init__(self, total_time=500, lx=117e-3, ly=62e-3, thickness=1.6e-3, n=117, k=205, rho=2700,
+                 cp=897, h_convection=7, power_in=1.17, ambient_temp=25.0, initial_plate_temp=0, position_heat_source=(16, 31), positions_thermistances=[(16, 31), (61, 31), (106, 31)]):
         #TODO: plug in position of thermistances, plug in facteur entre actuateur et plaque.
 
         # Parameters
         self.total_time = total_time  # Total simulation time [s]
         self.lx = lx  # Length [m]
-        self.ly = ly  # Depth  [m]
+        self.ly = ly  # Width  [m]
         self.thickness = thickness  # Thickness [m]
 
-        self.nx = nx  # Number of elements in x
-        self.ny = ny  # Number of elements in z
+        self.nx = n  # Number of elements in x
+        self.ny = round((ly * n)/lx) # Number of elements in y should be proportional to number of elements in x
 
         # Material properties (for Aluminum)
         self.k = k  # Thermal conductivity [W/m·K]
         self.rho = rho  # Density [kg/m^3]
         self.cp = cp  # Specific heat capacity [J/kg·K]
         self.alpha = k / (rho * cp)  # Thermal diffusivity [m^2/s]
-        #print(self.alpha)
 
         self.h_convection = h_convection  # Convection coefficient [W/m^2·K]
 
         # Calculated parameters
-        self.dx = lx / nx    # Discretization step in x [m]
-        self.dy = ly / ny    # Discretization step in y [m]
+        self.dx = lx / self.nx    # Discretization step in x [mm]
+        self.dy = ly / self.ny    # Discretization step in y [mm]
         self.dz = thickness  # Thickness in z [m]
 
         # TODO: Validate if this should change when in 2D (for now we don't even use dt)
@@ -48,19 +47,19 @@ class Plate:
      
         x = np.arange(0, self.nx) * self.dx
         y = np.arange(0, self.ny) * self.dy
-        self.X, self.Y = np.meshgrid(x, y)
+        self.X, self.Y = np.meshgrid(y, x)
 
         # Power input
         self.power_in = power_in  # Power [W]
         self.p_in_location = position_heat_source  # Location of power input (quarter of the length)
-        self.powers = np.zeros([nx, ny])
+        self.powers = np.zeros([self.nx, self.ny])
         self.powers[self.p_in_location] = power_in  # Power applied to one element
 
         # Initial conditions
         self.ambient_temp = 273.0 + ambient_temp  # Ambient temperature [K]
-        self.temps = np.full([nx, ny], self.ambient_temp + initial_plate_temp)  # Initial temperature of all elements in x #todo double check initial temp
+        self.temps = np.full([self.nx, self.ny], self.ambient_temp + initial_plate_temp)  # Initial temperature of all elements in x #todo double check initial temp
 
-        self.thermistance_location = position_heat_source  # Location of temperature measurement
+        self.thermistances_positions = positions_thermistances  # Location of temperature measurement
 
         # Preallocate vectors
         self.new_temps = np.zeros_like(self.temps)
