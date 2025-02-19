@@ -33,7 +33,6 @@ volatile uint32_t gInterruptCount = 0;
 volatile float sampledValue = 0.0;      
 volatile bool newSampleFlag = false;    //flag pour dire qu'il y a une nouvelle valeur qui doit etre sampler
 volatile float lastSampleTime = 0.0;    
-volatile uint16_t adcRawValue = 0;
 volatile bool pulseTriggerFlag = false; // Set in the ISR when a pulse is requested
 
 // Variables used for the extended pulse (handled in the main loop)
@@ -41,6 +40,17 @@ bool pulseActive = false;
 unsigned long pulseStartTime = 0;
 unsigned int extendedPulseDuration = 5; // Desired pulse duration in milliseconds
 
+// Global Variables for ADC (3 channels)
+//-------------------------------------------------
+volatile uint16_t adcRawValue0 = 0; // ADC channel 0 (A0)
+volatile uint16_t adcRawValue1 = 0; // ADC channel 1 (A1)
+volatile uint16_t adcRawValue2 = 0; // ADC channel 2 (A2)
+volatile uint8_t currentADCChannel = 0; // Tracks which channel was just read
+
+// Sampled voltage values (updated every 0.5 s)
+volatile float sampledVoltage0 = 0.0;
+volatile float sampledVoltage1 = 0.0;
+volatile float sampledVoltage2 = 0.0;
 
 
 ISR(TIMER1_COMPA_vect) {
@@ -52,7 +62,9 @@ ISR(TIMER1_COMPA_vect) {
     // Zone de travail pour l'interrupt, faire code interrupt ici
     if ((currentTime - lastSampleTime) >= 0.5) {
         // Convert the raw ADC value (0–1023) to a voltage (assuming 5 V reference)
-        sampledValue = adcRawValue * (5.0 / 1023.0);
+        sampledVoltage0 = adcRawValue0 * (5.0 / 1023.0);
+        sampledVoltage1 = adcRawValue1 * (5.0 / 1023.0);
+        sampledVoltage2 = adcRawValue2 * (5.0 / 1023.0);
         newSampleFlag = true;
         lastSampleTime = currentTime;
     }
@@ -60,7 +72,20 @@ ISR(TIMER1_COMPA_vect) {
 }
 
 ISR(ADC_vect) {
-    adcRawValue = ADC;
+    uint16_t adcValue = ADC; // Read the 10-bit ADC result
+    if (currentADCChannel == 0) {
+        adcRawValue0 = adcValue;
+        currentADCChannel = 1;
+        ADMUX = (ADMUX & 0xF0) | 0x01; // Select ADC1 (A1)
+    } else if (currentADCChannel == 1) {
+        adcRawValue1 = adcValue;
+        currentADCChannel = 2;
+        ADMUX = (ADMUX & 0xF0) | 0x02; // Select ADC2 (A2)
+    } else if (currentADCChannel == 2) {
+        adcRawValue2 = adcValue;
+        currentADCChannel = 0;
+        ADMUX = (ADMUX & 0xF0) | 0x00; // Re-select ADC0 (A0)
+    }
 }
 
 void ADC_Init() {
