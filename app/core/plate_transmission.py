@@ -3,7 +3,7 @@ import numpy as np
 
 class Plate:
     def __init__(self, total_time=500, lx=120e-3, ly=120e-3, thickness=1.5e-3, nx=120, ny=120, k=205, rho=2700,
-                 cp=890, h_convection=7, power_in=1.17, ambient_temp=25.0, initial_plate_temp=0, position_heat_source=(30, 60), position_thermistance=(90, 60)):
+                 cp=897, h_convection=7, power_in=1.17, ambient_temp=25.0, initial_plate_temp=0, position_heat_source=(30, 60), position_thermistance=(90, 60)):
         #TODO: plug in position of thermistances, plug in facteur entre actuateur et plaque.
 
         # Parameters
