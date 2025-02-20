@@ -137,12 +137,12 @@ void loop() {
 
     if (sampleReady) {
         Serial.print(currentTime * 1000, 1);  // Time in ms
-        Serial.print(" ");
-        Serial.print(currSampleA0, 3); 
-        Serial.print(" ");
-        Serial.print(currSampleA1, 3);
-        Serial.print(" ");
+        Serial.print(", ");
+        Serial.print(currSampleA1, 3); 
+        Serial.print(", ");
         Serial.print(currSampleA2, 3);
+        Serial.print(", ");
+        Serial.print(currSampleA0, 3);
         Serial.println("");
 
 
@@ -159,8 +159,8 @@ void loop() {
         // Output the PWM signal on PWM_PIN
         analogWrite(PWM_PIN, pwmValue);
         
-        Serial.print("PWM Output: ");
-        Serial.println(pwmValue);
+        //Serial.print("PWM Output: ");
+        //Serial.println(pwmValue);
     }
 
     if (pulseTriggerFlag) {
