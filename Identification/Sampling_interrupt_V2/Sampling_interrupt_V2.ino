@@ -137,13 +137,13 @@ void loop() {
 
     if (sampleReady) {
         Serial.print(currentTime * 1000, 1);  // Time in ms
-        Serial.print(" ms, Sampled value A0: ");
+        Serial.print(" ");
         Serial.print(currSampleA0, 3); 
-        Serial.print(" V, Sampled value A1: ");
+        Serial.print(" ");
         Serial.print(currSampleA1, 3);
-        Serial.print(" V, Sampled value A2: ");
+        Serial.print(" ");
         Serial.print(currSampleA2, 3);
-        Serial.println(" V");
+        Serial.println("");
 
 
         float setpoint = 2.5;  // Desired voltage (V)
