@@ -38,6 +38,7 @@ def update_plot(frame:int, ax1: plt.Axes, ax2: plt.Axes):
     x = [0, 1, 2, 3]
     y = [1, 3, 4, 5]
     ax2.clear()
+    ax2.grid()
     times.append(plate.current_time)
     thermistance_temps.append(plate.temps[plate.thermistances_positions[2]])
     line2 = ax2.plot(times, thermistance_temps)
