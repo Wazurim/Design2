@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import math
+import numpy as np
 
 def volt_to_resistance(volt:float):
+    # volt = 5 - volt
     # resistance = 2000*volt/(1-volt/5)
     resistance = 5 * (10000-2000 * volt)/volt
     return resistance
@@ -19,7 +21,7 @@ def resistance_to_temp(res:float):
     return temp
 
 
-f = open("arduino_output.txt", "r")
+f = open("arduino_output_essaie2.txt", "r")
 
 time = []
 thermistance1 = []
@@ -33,6 +35,16 @@ for line in f:
     thermistance2.append(resistance_to_temp(volt_to_resistance(float(eachItem[2]))))
     thermistance3.append(resistance_to_temp(volt_to_resistance(float(eachItem[3]))))
 
+u = np.append(np.zeros(10), np.ones(1027) * -0.824)
+u = np.append(u, np.zeros(len(time) - 10 - 1027))
+
+np.savetxt('essaie2_temp.txt', np.c_[time, u, thermistance1, thermistance2, thermistance3])
+
+plt.grid()
+plt.xlabel("Temps en seconde")
+plt.ylabel("Température en celsius")
+plt.title("Test d'échelon -0.824 ampères")
+plt.plot(time, u)
 plt.plot(time, thermistance1)
 plt.plot(time, thermistance2)
 plt.plot(time, thermistance3)
