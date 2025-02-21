@@ -20,7 +20,7 @@
 
 
 #define F_CPU 16000000UL  
-#define DESIRED_FREQ 1
+#define DESIRED_FREQ 1 //doit etre <= 1 ou un exponent of 5 soit 5^x ou x entre 0 et 6 sinon il y a des incertitude sur le temps
 #define PRESCALER 1024      
 #define TIMER_TICKS (F_CPU / PRESCALER)
 #define TIMER_TICKS_PER_SECOND (TIMER_TICKS / DESIRED_FREQ)
