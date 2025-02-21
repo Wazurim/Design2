@@ -3,7 +3,7 @@ import numpy as np
 
 class Plate:#117.21, 61.6
     def __init__(self, total_time=500, lx=117e-3, ly=62e-3, thickness=1.6e-3, n=117, k=205, rho=2700,
-                 cp=897, h_convection=7, power_in=1.17, ambient_temp=25.0, initial_plate_temp=0, position_heat_source=(16, 31), positions_thermistances=[(16, 31), (61, 31), (106, 31)]):
+                 cp=897, h_convection=7, power_in=-0.824, power_transfer=-1, ambient_temp=25.0, initial_plate_temp=0, position_heat_source=(16, 31), positions_thermistances=[(16, 31), (61, 31), (106, 31)]):
         #TODO: plug in position of thermistances, plug in facteur entre actuateur et plaque.
 
         # Parameters
@@ -50,10 +50,10 @@ class Plate:#117.21, 61.6
         self.X, self.Y = np.meshgrid(y, x)
 
         # Power input
-        self.power_in = power_in  # Power [W]
+        self.power_in = power_in * power_transfer  # Power [W]
         self.p_in_location = position_heat_source  # Location of power input (quarter of the length)
         self.powers = np.zeros([self.nx, self.ny])
-        self.powers[self.p_in_location] = power_in  # Power applied to one element
+        self.powers[self.p_in_location] = self.power_in  # Power applied to one element
 
         # Initial conditions
         self.ambient_temp = 273.0 + ambient_temp  # Ambient temperature [K]
