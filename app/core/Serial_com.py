@@ -1,34 +1,106 @@
+import tkinter as tk
+import threading
 import serial
-#import app.app_settings_and_ressources as res
+import time
 
-#class Serial_com:
-#    def __init__(self):
-#        #self.ser = serial.Serial(res.SERIAL_PORT, res.SERIAL_BAUD_RATE, timeout=1)#
-#
-#    def send_data(self, data):
-#        self.ser.write(data.encode("utf-8"))
+class SerialGUI:
+    def __init__(self, root, port, baud):
+        self.root = root
+        self.port = port
+        self.baud = baud
+        self.ser = serial.Serial(port, baud, timeout=1)
+        time.sleep(2)  # Laisser l’Arduino se réinitialiser si nécessaire
 
-#    def read_data(self):
-#        return self.ser.readline().decode("utf-8")
-#    
-#    def close(self):
-#        self.ser.close()
+        self.running = True
+        self.read_thread = threading.Thread(target=self.read_from_port)
+        self.read_thread.start()
 
+        # ----- Interface Graphique -----
+        # 1. Boutons pour Play, Stop, Reset
+        self.btn_play = tk.Button(root, text="Play", command=self.send_play)
+        self.btn_play.pack(pady=2)
 
-# Open serial connection on COM6 at 9600 baud
-ser = serial.Serial('COM6', 9600, timeout=1)
+        self.btn_stop = tk.Button(root, text="Stop", command=self.send_stop)
+        self.btn_stop.pack(pady=2)
 
-# Open a file to write the output
-with open("arduino_output_essaie2.txt", "w") as file:
-    try:
-        print("Reading from Arduino. Press Ctrl+C to stop.")
-        while True:
-            # Read a line from the serial port
-            line = ser.readline().decode('utf-8').strip()
+        self.btn_reset = tk.Button(root, text="Reset", command=self.send_reset)
+        self.btn_reset.pack(pady=2)
+
+        # 2. Champs de saisie pour amplitude et fréquence
+        #    et un bouton "Send Param"
+        self.param_frame = tk.Frame(root)
+        self.param_frame.pack(pady=5)
+
+        tk.Label(self.param_frame, text="Amplitude:").grid(row=0, column=0, padx=5)
+        self.entry_amp = tk.Entry(self.param_frame, width=8)
+        self.entry_amp.insert(0, "1.0")  # Valeur par défaut
+        self.entry_amp.grid(row=0, column=1, padx=5)
+
+        tk.Label(self.param_frame, text="Fréquence:").grid(row=1, column=0, padx=5)
+        self.entry_freq = tk.Entry(self.param_frame, width=8)
+        self.entry_freq.insert(0, "0.1")  # Valeur par défaut
+        self.entry_freq.grid(row=1, column=1, padx=5)
+
+        self.btn_send_param = tk.Button(self.param_frame, text="Send Param", command=self.send_params)
+        self.btn_send_param.grid(row=2, column=0, columnspan=2, pady=5)
+
+        # 3. Zone de texte pour afficher ce qui est reçu depuis l’Arduino
+        self.output_text = tk.Text(root, height=10, width=50)
+        self.output_text.pack(pady=5)
+
+    # Thread secondaire : lecture continue
+    def read_from_port(self):
+        while self.running:
+            line = self.ser.readline().decode('ascii', errors='ignore').strip()
             if line:
-                print(line)
-                file.write(line + "\n")
-    except KeyboardInterrupt:
-        print("Stopping the script.")
-    finally:
-        ser.close()
+                self.root.after(0, self.print_line, line)
+        print("Thread de lecture terminé")
+
+    def print_line(self, text):
+        # Affiche la donnée reçue dans la zone de texte
+        self.output_text.insert(tk.END, text + "\n")
+        self.output_text.see(tk.END)
+
+    # ----- Méthodes pour envoyer des commandes -----
+    def send_play(self):
+        self.ser.write(b"p\n")
+
+    def send_stop(self):
+        self.ser.write(b"S\n")
+
+    def send_reset(self):
+        self.ser.write(b"R\n")
+
+    def send_params(self):
+        """
+        Récupère l'amplitude et la fréquence saisies,
+        et envoie la commande "PARAM A=... F=..."
+        """
+        amplitude = self.entry_amp.get()
+        frequency = self.entry_freq.get()
+        cmd = f"PPARAM A={amplitude} F={frequency}\n"
+        self.ser.write(cmd.encode('ascii'))
+        self.print_line(cmd)
+
+    def close(self):
+        """Arrêt propre : stoppe la lecture et ferme le port série."""
+        self.running = False
+        self.read_thread.join()
+        self.ser.close()
+
+def main():
+    root = tk.Tk()
+    root.title("Exemple Serial + Tkinter: Paramètres")
+
+    # Adapter le port (ex: "COM3" ou "/dev/ttyACM0") et le baudrate
+    app = SerialGUI(root, port="COM3", baud=115200)
+
+    def on_closing():
+        app.close()
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()

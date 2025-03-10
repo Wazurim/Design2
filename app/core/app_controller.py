@@ -1,8 +1,9 @@
 import os, sys
 from app.ui.main_window import MainWindow
 from app.core.JSON_Handler import JsonHandler
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QApplication
 from app.core.graph_plate_transmission_copy import Simulateur
+from app.ui.Serial_com_gui import SerialMonitor
 
 class AppController:
     def __init__(self):
@@ -12,6 +13,20 @@ class AppController:
         self.cwd = os.getcwd()
         self.config_dir = "app/Configs"
         self.__find_conf()
+
+        self.app = QApplication(sys.argv)
+        self.serial_window = SerialMonitor(port="COM3", baudrate=115200)
+        screen = self.app.primaryScreen()
+        available_rect = screen.availableGeometry()
+
+        width = int(available_rect.width() * 0.8)
+        height = int(available_rect.height() * 0.8)
+        x = available_rect.x() + (available_rect.width() - width) // 2
+        y = available_rect.y() + (available_rect.height() - height) // 2
+        self.main_window.setGeometry(x, y, width, height)
+        self.serial_window.setGeometry(x, y, width, height)
+
+
 
 
 
@@ -78,6 +93,12 @@ class AppController:
 
     def show_main_window(self):
         self.main_window.show()
+
+    def show_serial_monitor(self):
+        self.serial_window.show()
+
+
+
 
     def load_params(self):
         self.__load_params(self.main_window.cb_import.currentText())
