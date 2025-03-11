@@ -42,13 +42,15 @@ unsigned int extendedPulseDuration = 5; // Desired pulse duration in millisecond
 //-------------------------------------------------
 volatile uint16_t adcRawValue0 = 0; // ADC channel 0 (A0)
 volatile uint16_t adcRawValue1 = 0; // ADC channel 1 (A1)
-volatile uint16_t adcRawValue2 = 0; // ADC channel 2 (A2)
+volatile uint16_t adcRawValue2 = 0;
+volatile uint16_t adcRawValue3 = 0; // ADC channel 2 (A2)
 volatile uint8_t currentADCChannel = 0; // Tracks which channel was just read
 
 // Sampled voltage values (updated every 0.5 s)
 volatile float sampledVoltageA0 = 0.0;
 volatile float sampledVoltageA1 = 0.0;
 volatile float sampledVoltageA2 = 0.0;
+volatile float sampledVoltageA3 = 0.0;
 
 bool running = false;
 float Time = 0;
@@ -74,6 +76,7 @@ ISR(TIMER1_COMPA_vect) {
         sampledVoltageA0 = adcRawValue0 * (5.0 / 1023.0);
         sampledVoltageA1 = adcRawValue1 * (5.0 / 1023.0);
         sampledVoltageA2 = adcRawValue2 * (5.0 / 1023.0);
+        sampledVoltageA3 = adcRawValue3 * (5.0 / 1023.0);
         newSampleFlag = true;
         lastSampleTime = currentTime;
     }
@@ -118,6 +121,14 @@ ISR(ADC_vect) {
     ADCSRA |= (1 << ADSC);  // Start ADC2 conversion
     while (ADCSRA & (1 << ADSC));  // Wait for ADC2 conversion to complete
     adcRawValue2 = ADC;  // Read ADC2
+
+    // Switch to ADC3
+    ADMUX = (ADMUX & 0xF0) | 0x03;
+    //ADMUX = (ADMUX & 0xF0) | 0x00;
+    _delay_us(10); // Allow voltage to stabilize
+    ADCSRA |= (1 << ADSC);  // Start ADC3 conversion
+    while (ADCSRA & (1 << ADSC));  // Wait for ADC3 conversion to complete
+    adcRawValue3 = ADC;  // Read ADC3
 
     // Switch back to ADC0 for next cycle
     ADMUX = (ADMUX & 0xF0) | 0x00;
@@ -175,9 +186,10 @@ void setup() {
 void loop() {
     noInterrupts();
     bool sampleReady = newSampleFlag;
-    float currSampleA0 = sampledVoltageA0;
-    float currSampleA1 = sampledVoltageA1;
-    float currSampleA2 = sampledVoltageA2;
+    float currSamplet2 = sampledVoltageA0; //t2
+    float currSamplet4 = sampledVoltageA1; //t4
+    float currSamplet1 = sampledVoltageA2; //t1
+    float currSamplet3 = sampledVoltageA3; //t3
     uint32_t interruptSnapshot = gInterruptCount;
     const float period = (float)(OCR1A_VALUE + 1) / (float)TIMER_TICKS;
     CurrentTime = interruptSnapshot * period - Time;
@@ -198,7 +210,7 @@ void loop() {
 
 
         if (running){
-            float error = consigne - currSampleA0;
+            float error = consigne - currSamplet3;
             float Kp = 100.0;      // Proportional gain (adjust as needed)
             float baseDuty = 128;  // Base duty cycle (midpoint of 0–255)
             float control = baseDuty + (Kp * error);
@@ -214,11 +226,13 @@ void loop() {
             Serial.print(", ");
             Serial.print(CurrentTime* 1000);  // Time in ms
             Serial.print(", ");
-            Serial.print(currSampleA0, 3); 
+            Serial.print(currSamplet1, 3); 
             Serial.print(", ");
-            Serial.print(currSampleA1, 3);
+            Serial.print(currSamplet2, 3);
             Serial.print(", ");
-            Serial.print(currSampleA2, 3);
+            Serial.print(currSamplet3, 3);
+            Serial.print(", ");
+            Serial.print(currSamplet4, 3);
             Serial.print("\t\t                  ");
             Serial.print("PWM Output: ");
             Serial.println(pwmValue);
