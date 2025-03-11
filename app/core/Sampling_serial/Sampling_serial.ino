@@ -20,13 +20,13 @@
 
 
 #define F_CPU 16000000UL  
-
+#define DESIRED_FREQ 1 //doit etre <= 1 ou un exponent of 5 soit 5^x ou x entre 0 et 6 sinon il y a des incertitude sur le temps
 #define PRESCALER 1024      
 #define TIMER_TICKS (F_CPU / PRESCALER)
+#define TIMER_TICKS_PER_SECOND (TIMER_TICKS / DESIRED_FREQ)
 #define PWM_PIN 3
 #define CONTROL_PIN 7
-float freq = 1;
-uint16_t OCR1A_VALUE = (uint16_t)((TIMER_TICKS / freq) - 1);
+const uint16_t OCR1A_VALUE = (uint16_t)(TIMER_TICKS_PER_SECOND - 1);
 
 volatile uint32_t gInterruptCount = 0;      
 volatile bool newSampleFlag = false;    //flag pour dire qu'il y a une nouvelle valeur qui doit etre sampler
@@ -80,29 +80,56 @@ ISR(TIMER1_COMPA_vect) {
     pulseTriggerFlag = true;
 }
 
+//ISR(ADC_vect) {
+//    uint16_t adcValue = ADC; // Read the 10-bit ADC result
+//    if (currentADCChannel == 0) {
+//        
+//        adcRawValue0 = adcValue;
+//        currentADCChannel = 1;
+//        ADMUX = (ADMUX & 0xF0) | 0x01; // Select ADC1 (A1)
+//    } else if (currentADCChannel == 1) {
+//        adcRawValue1 = adcValue;
+//        currentADCChannel = 2;
+//        ADMUX = (ADMUX & 0xF0) | 0x02; // Select ADC2 (A2)
+//    } else if (currentADCChannel == 2) {
+//        adcRawValue2 = adcValue;
+//        currentADCChannel = 0;
+//        ADMUX = (ADMUX & 0xF0) | 0x00; // Re-select ADC0 (A0)
+//    }
+//}
+
 ISR(ADC_vect) {
-    uint16_t adcValue = ADC; // Read the 10-bit ADC result
-    if (currentADCChannel == 0) {
-        adcRawValue0 = adcValue;
-        currentADCChannel = 1;
-        ADMUX = (ADMUX & 0xF0) | 0x01; // Select ADC1 (A1)
-    } else if (currentADCChannel == 1) {
-        adcRawValue1 = adcValue;
-        currentADCChannel = 2;
-        ADMUX = (ADMUX & 0xF0) | 0x02; // Select ADC2 (A2)
-    } else if (currentADCChannel == 2) {
-        adcRawValue2 = adcValue;
-        currentADCChannel = 0;
-        ADMUX = (ADMUX & 0xF0) | 0x00; // Re-select ADC0 (A0)
-    }
+    // Read ADC0 (first conversion is already completed when ISR triggers)
+    _delay_us(10);  
+    adcRawValue0 = ADC;  
+
+    // Switch to ADC1
+    ADMUX = (ADMUX & 0xF0) | 0x01;  
+    _delay_us(10); // Allow voltage to stabilize
+    ADCSRA |= (1 << ADSC);  // Start ADC1 conversion
+    while (ADCSRA & (1 << ADSC));  // Wait for ADC1 conversion to complete
+    adcRawValue1 = ADC;  // Read ADC1
+
+    // Switch to ADC2
+    ADMUX = (ADMUX & 0xF0) | 0x02;  
+    _delay_us(10); // Allow voltage to stabilize
+    ADCSRA |= (1 << ADSC);  // Start ADC2 conversion
+    while (ADCSRA & (1 << ADSC));  // Wait for ADC2 conversion to complete
+    adcRawValue2 = ADC;  // Read ADC2
+
+    // Switch back to ADC0 for next cycle
+    ADMUX = (ADMUX & 0xF0) | 0x00;  
+    ADCSRA |= (1 << ADSC);  // Start ADC0 conversion for the next ISR cycle
+
+     // Indicate that all three samples are ready
 }
+
 
 void ADC_Init() {
     ADMUX = (1 << REFS0);  // Use AVcc as the reference voltage, input on ADC0 (A0)
     // Enable ADC, its interrupt, auto-triggering (free-running mode), and set a prescaler.
-    ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADATE) | (1 << ADPS2) | (1 << ADPS1); 
-    ADCSRB = 0;           // Free-running mode
-    DIDR0 = 0x1F;         // Disable digital input buffers on ADC0-ADC4 to reduce power consumption
+    ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADPS2) | (1 << ADPS1); 
+    DIDR0 = 0x07;  // Disable digital input buffers on ADC0, ADC1, and ADC2
 }
 
 void triggerExtendedPulse(unsigned int duration) {
@@ -149,8 +176,6 @@ void loop() {
     float currSampleA1 = sampledVoltageA1;
     float currSampleA2 = sampledVoltageA2;
     uint32_t interruptSnapshot = gInterruptCount;
-    OCR1A_VALUE = (uint16_t)((TIMER_TICKS / freq) - 1);
-    OCR1A = OCR1A_VALUE;
     const float period = (float)(OCR1A_VALUE + 1) / (float)TIMER_TICKS;
     CurrentTime = interruptSnapshot * period - Time;
     float trueTime = interruptSnapshot * period;
@@ -289,13 +314,13 @@ void parseParameters(const String &line) {
             end = line.length();
         }
         String valF = line.substring(start, end);
-        freq = valF.toFloat();
+        //freq = valF.toFloat();
         }
     
       // Display the newly set parameters
         Serial.print("New parameters -> Consigne: ");
         Serial.print(consigne);
-        Serial.print(" , Frequency: ");
-        Serial.println(freq);
+        //Serial.print(" , Frequency: ");
+        //Serial.println(freq);
     }
     
