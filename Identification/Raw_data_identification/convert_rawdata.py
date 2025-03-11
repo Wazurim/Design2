@@ -31,14 +31,14 @@ thermistance3 = []
 for line in f:
     eachItem = line.split(', ')
     time.append(float(eachItem[0])/1000)
-    thermistance1.append(resistance_to_temp(volt_to_resistance(float(eachItem[1]))))
-    thermistance2.append(resistance_to_temp(volt_to_resistance(float(eachItem[2]))))
-    thermistance3.append(resistance_to_temp(volt_to_resistance(float(eachItem[3]))))
+    thermistance1.append(float(eachItem[1]))
+    thermistance2.append(float(eachItem[2]))
+    thermistance3.append(float(eachItem[3]))
 
 u = np.append(np.zeros(10), np.ones(1027) * -0.824)
 u = np.append(u, np.zeros(len(time) - 10 - 1027))
 
-np.savetxt('essaie2_temp.txt', np.c_[time, u, thermistance1, thermistance2, thermistance3])
+np.savetxt('essaie2_temp_volt.txt', np.c_[time, u, thermistance1, thermistance2, thermistance3])
 
 plt.grid()
 plt.xlabel("Temps en seconde")

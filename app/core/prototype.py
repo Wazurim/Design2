@@ -6,19 +6,21 @@ import matplotlib.pyplot as plt
 plate = Plate()
 
 # Définir le temps total de simulation (en secondes)
-total_time = 10  # à modifier selon les besoins
+total_time = 2000  # à modifier selon les besoins
 
 # Calculer le nombre d'itérations basé sur dt
 num_steps = int(total_time / plate.dt)  # Nombre total d'itérations
 
 # Définir le ratio d'itérations à sauvegarder
-save_ratio = 1
+save_ratio = 0.0001
 save_interval = 1 / save_ratio   # Nombre d'itérations entre chaque sauvegarde
 
 # Stockage des résultats
 temps_list = []
 time_list = []
-thermistances_temps = []
+thermistance1_temps = []
+thermistance2_temps = []
+thermistance3_temps = []
 
 for step in range(num_steps):
     plate.update_plate_with_numpy()
@@ -27,23 +29,27 @@ for step in range(num_steps):
     if step % save_interval == 0:
         # temps_list.append(plate.temps.copy())  # Sauvegarde des températures
         time_list.append(plate.current_time)   # Sauvegarde du temps simulé
-        thermistances_temps.append(plate.temps[plate.thermistances_positions[2]])
+        thermistance1_temps.append(plate.temps[plate.thermistances_positions[0]]-273.15)
+        thermistance2_temps.append(plate.temps[plate.thermistances_positions[1]]-273.15)
+        thermistance3_temps.append(plate.temps[plate.thermistances_positions[2]]-273.15)
         print(f"Enregistrement à l'étape {step} / {num_steps}")
         
     
 
 # Conversion en tableaux numpy
-temps_array = np.array(temps_list)
+# temps_array = np.array(temps_list)
 time_array = np.array(time_list)
 
 # Sauvegarde des données dans un fichier compressé
 # np.savez_compressed("temperature_data.npz", temps=temps_array, time=time_array, X=plate.X, Y=plate.Y)
-np.savetxt('thermistance3_temp.txt', np.transpose([time_array, thermistances_temps]))
+np.savetxt('thermistance3_temp.txt', np.transpose([time_array, thermistance1_temps, thermistance2_temps, thermistance3_temps]))
 
 print(f"Simulation terminée. Temps total simulé : {total_time}s, Nombre total d'itérations : {num_steps}, "
       f"Intervalle de sauvegarde : {save_interval}, Nombre de frames sauvegardées : {len(time_array)}")
 
-plt.plot(time_list, thermistances_temps)
+plt.plot(time_list, thermistance1_temps)
+plt.plot(time_list, thermistance2_temps)
+plt.plot(time_list, thermistance3_temps)
 plt.show()
 
 

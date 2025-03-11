@@ -2,9 +2,11 @@ import numpy as np
 
 
 class Plate:#117.21, 61.6
-    def __init__(self, total_time=500, lx=117e-3, ly=62e-3, thickness=1.6e-3, n=117, k=205, rho=2700,
-                 cp=897, h_convection=7, amp_in=-0.824, power_transfer=-1, ambient_temp=25.0, initial_plate_temp=0, position_heat_source=(16, 31), positions_thermistances=[(16, 31), (61, 31), (106, 31)]):
-        #TODO: plug in position of thermistances, plug in facteur entre actuateur et plaque.
+    def __init__(self, total_time=500, lx=117e-3, ly=62e-3, thickness=1.6e-3, n=117, k=350, rho=2700,
+                 cp=896, h_convection=13.5, amp_in=-0.824, power_transfer=-1.4, ambient_temp=23.8, initial_plate_temp=0,
+                 position_heat_source=(16, 31), positions_thermistances=[(16, 31), (61, 31), (106, 31)],
+                 start_heat_time=10, stop_heat_time=1027):
+        #TODO: make positions change according to lx, ly not n
 
         # Parameters
         self.total_time = total_time  # Total simulation time [s]
@@ -54,6 +56,8 @@ class Plate:#117.21, 61.6
         self.p_in_location = position_heat_source  # Location of power input (quarter of the length)
         self.powers = np.zeros([self.nx, self.ny])
         self.powers[self.p_in_location] = self.power_in  # Power applied to one element
+        self.start_heat_time = start_heat_time
+        self.stop_heat_time = stop_heat_time
 
         # Initial conditions
         self.ambient_temp = 273.0 + ambient_temp  # Ambient temperature [K]
@@ -82,8 +86,9 @@ class Plate:#117.21, 61.6
         # Apply convection boundary conditions
         self.new_temps += self.dt_conv * (self.ambient_temp - self.temps) * 2 * self.area_top / self.volume
         
-        # Apply power term
-        self.new_temps += self.dt / (self.rho * self.cp) * self.powers / self.volume
+        # Apply power term if it's time to heat up
+        if (self.current_time >= self.start_heat_time and self.current_time < self.stop_heat_time):
+            self.new_temps += self.dt / (self.rho * self.cp) * self.powers / self.volume
         
         # Boundary handling manually to avoid wrapping from np.roll
         self.new_temps[0, :] += self.dt_conv * (self.ambient_temp - self.temps[0, :]) * self.area_sides / self.volume
