@@ -104,24 +104,24 @@ ISR(ADC_vect) {
     adcRawValue0 = ADC;  
 
     // Switch to ADC1
-    //ADMUX = (ADMUX & 0xF0) | 0x01;
-    ADMUX = (ADMUX & 0xF0) | 0x02;
+    ADMUX = (ADMUX & 0xF0) | 0x01;
+    //ADMUX = (ADMUX & 0xF0) | 0x02;
     _delay_us(10); // Allow voltage to stabilize
     ADCSRA |= (1 << ADSC);  // Start ADC1 conversion
     while (ADCSRA & (1 << ADSC));  // Wait for ADC1 conversion to complete
     adcRawValue1 = ADC;  // Read ADC1
 
     // Switch to ADC2
-    //ADMUX = (ADMUX & 0xF0) | 0x02;
-    ADMUX = (ADMUX & 0xF0) | 0x00;
+    ADMUX = (ADMUX & 0xF0) | 0x02;
+    //ADMUX = (ADMUX & 0xF0) | 0x00;
     _delay_us(10); // Allow voltage to stabilize
     ADCSRA |= (1 << ADSC);  // Start ADC2 conversion
     while (ADCSRA & (1 << ADSC));  // Wait for ADC2 conversion to complete
     adcRawValue2 = ADC;  // Read ADC2
 
     // Switch back to ADC0 for next cycle
-    //ADMUX = (ADMUX & 0xF0) | 0x00;
-    ADMUX = (ADMUX & 0xF0) | 0x01;
+    ADMUX = (ADMUX & 0xF0) | 0x00;
+    //ADMUX = (ADMUX & 0xF0) | 0x01;
     ADCSRA |= (1 << ADSC);  // Start ADC0 conversion for the next ISR cycle
 
      // Indicate that all three samples are ready
