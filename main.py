@@ -5,8 +5,8 @@ from app.core.app_controller import AppController
 def main():
     app = QApplication(sys.argv)
     ac = AppController()
-    ac.show_main_window()
-    #ac.show_serial_monitor()
+    #ac.show_main_window()
+    ac.show_serial_monitor()
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
