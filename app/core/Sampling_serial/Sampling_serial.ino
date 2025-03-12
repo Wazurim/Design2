@@ -24,10 +24,10 @@
 
 // *********** PWM (Timer1) Configuration ***********
 // Use full 16-bit resolution for PWM (0 to 65535)
-#define PWM_TOP 65535UL
+#define PWM_TOP 4095UL
 // Choose the Timer1 prescaler for PWM (available options: 1, 8, 64, 256, 1024)
 // For example, using 8 yields: PWM Frequency = 16e6 / (8 * 65536) ≈ 30.5 Hz
-#define PWM_PRESCALER 8UL
+#define PWM_PRESCALER 4UL
 
 // Macro to compute actual PWM frequency (for info only)
 #define ACTUAL_PWM_FREQ (F_CPU / (PWM_PRESCALER * (PWM_TOP + 1)))
@@ -62,10 +62,11 @@ volatile float sampledVoltageA3 = 0.0;
 bool running = false;
 float Time = 0;
 float CurrentTime = 0;
-float consigne = 2.5; // Setpoint voltage
+float consigne = 25; // Setpoint voltage
 
-float Kp = 0.5;   // Start with a low value; adjust experimentally.
-float Ki = 0.1;   // Start with a low value; adjust experimentally.
+float Kp = 0.88;   // Start with a low value; adjust experimentally.
+float Ki = 1/101.72;   // Start with a low value; adjust experimentally.
+float previous = PWM_TOP/2;
 float integral = 0;
 const float dt = 1/DESIRED_ADC_UPDATE_FREQ; // Assuming your ADC update is 1 Hz
 
@@ -211,9 +212,9 @@ void loop() {
     interrupts();
     
     if (Serial.available() > 0) {
-        noInterrupts();
+
         String line = Serial.readStringUntil('\n');
-        interrupts();
+
         line.trim();
         if (line.length() > 0) {
             handleLine(line);
@@ -226,18 +227,27 @@ void loop() {
         
         if (running) {
             // Simple proportional control: adjust PWM duty cycle based on error between setpoint and measured ADC value.
-            float error = consigne - currSamplet3;
+            float error = consigne - voltage_to_tempt3(currSamplet3);
             float baseDuty = PWM_TOP / 2;
-            integral += error * dt;
-            float control = baseDuty + (Kp * error) + (Ki * integral);
+            //float control = ((0.8603f/(previous - 0.9805)) * (5-error) + 2.5)*PWM_TOP/5;
+            previous = error;
+            const float dt = 1/DESIRED_ADC_UPDATE_FREQ; 
+            integral += error - previous;
+            float control = -(error *Kp + integral *Ki) * PWM_TOP/10;
 
-            if (control > PWM_TOP){
-                control = PWM_TOP;
-                integral -= error * dt;
+            //if (control > 25) {
+            //    control = 25;
+            //}
+
+            control +=  PWM_TOP/2;
+
+            if (control > PWM_TOP-750){
+                control = PWM_TOP-750;
+                //integral -= error;
             } 
-            if (control < 0){
-                control = 0;
-                integral += error * dt;
+            if (control < 750){
+                control = 750;
+                //integral -= error;
             } 
             uint16_t pwmValue = (uint16_t) control;
             OCR1A = pwmValue;
@@ -248,17 +258,17 @@ void loop() {
             Serial.print(" / ");
             Serial.print(PWM_TOP);
             Serial.print(" | ADC t1: ");
-            Serial.print(voltage_to_temp(currSamplet1), 3);
+            Serial.print(voltage_to_tempt1(currSamplet1), 3);
             Serial.print(" | ADC t2: ");
-            Serial.print(voltage_to_temp(currSamplet2), 3);
+            Serial.print(voltage_to_tempt1(currSamplet2), 3);
             Serial.print(" | ADC t3: ");
-            Serial.print(voltage_to_temp(currSamplet3), 3);
+            Serial.print(voltage_to_tempt3(currSamplet3), 3);
             Serial.print(" | ADC t4: ");
-            Serial.print(voltage_to_temp(currSamplet4), 3);
+            Serial.print(voltage_to_tempt3(currSamplet4), 3);
             Serial.print(" |\t\t error: ");
             Serial.print(error, 3);
-            Serial.print(" | Control: ");
-            Serial.println(control, 3);
+            Serial.print(" | Integral: ");
+            Serial.println(integral, 3);
         }
         else {
             OCR1A = PWM_TOP / 2;
@@ -268,13 +278,13 @@ void loop() {
             Serial.print(" / ");
             Serial.print(PWM_TOP);
             Serial.print(" | ADC t1: ");
-            Serial.print(voltage_to_temp(currSamplet1), 3);
+            Serial.print(voltage_to_tempt1(currSamplet1), 3);
             Serial.print(" | ADC t2: ");
-            Serial.print(voltage_to_temp(currSamplet2), 3);
+            Serial.print(voltage_to_tempt1(currSamplet2), 3);
             Serial.print(" | ADC t3: ");
-            Serial.print(voltage_to_temp(currSamplet3), 3);
+            Serial.print(voltage_to_tempt3(currSamplet3), 3);
             Serial.print(" | ADC t4: ");
-            Serial.print(voltage_to_temp(currSamplet4), 3);
+            Serial.print(voltage_to_tempt3(currSamplet4), 3);
             Serial.println("\t Control OFF");
         }
     }
@@ -287,7 +297,7 @@ void handleLine(const String &line) {
         running = true;
         Time = CurrentTime + Time;
         CurrentTime = 0;
-        integral = 0;
+        
         Serial.println("Control loop ON");
     } else if (line.equalsIgnoreCase("S")) {
         running = false;
@@ -296,7 +306,7 @@ void handleLine(const String &line) {
         running = false;
         Time = CurrentTime + Time;
         CurrentTime = 0;
-        integral = 0;
+
         Serial.println("RESET - send new parameters via 'PARAM C=... F=...'");
     } else if (line.startsWith("PARAM")) {
         parseParameters(line);
@@ -360,14 +370,28 @@ void parseParameters(const String &line) {
     Serial.println(consigne);
 }
 
-float voltage_to_temp(float volt) {
+float voltage_to_tempt1(float volt) {
     const float A1 = 0.00335401643468053;
-    const float B1 = 0.000256523550896126;
+    const float B = 0.000256523550896126;
     const float C1 = 0.00000260597012072052;
     const float D1 = 0.000000063292612648746;
     const float RT = 10000.0;
+    volt = volt * 1.6f/4.9f + 1.7f;
     float res = 5 * (10000 - 2000 * volt) / volt;
-    float logVal = std::log(RT / res);
-    float temp = 1.0 / (A1 + B1 * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
+    float logVal = log(RT / res);
+    float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
+    return temp;
+}
+
+float voltage_to_tempt3(float volt) {
+    const float A1 = 0.00335401643468053;
+    const float B = 0.000256523550896126;
+    const float C1 = 0.00000260597012072052;
+    const float D1 = 0.000000063292612648746;
+    const float RT = 10000.0;
+    volt = volt * 0.7f/4.9f + 2.2f;
+    float res = 5 * (10000 - 2000 * volt) / volt;
+    float logVal = log(RT / res);
+    float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
     return temp;
 }
