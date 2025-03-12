@@ -64,6 +64,11 @@ float Time = 0;
 float CurrentTime = 0;
 float consigne = 2.5; // Setpoint voltage
 
+float Kp = 0.5;   // Start with a low value; adjust experimentally.
+float Ki = 0.1;   // Start with a low value; adjust experimentally.
+float integral = 0;
+const float dt = 1/DESIRED_ADC_UPDATE_FREQ; // Assuming your ADC update is 1 Hz
+
 // Forward declarations for serial command handling
 void handleLine(const String &line);
 void parseParameters(const String &line);
@@ -205,24 +210,35 @@ void loop() {
     if (sampleReady) newSampleFlag = false;
     interrupts();
     
+    if (Serial.available() > 0) {
+        noInterrupts();
+        String line = Serial.readStringUntil('\n');
+        interrupts();
+        line.trim();
+        if (line.length() > 0) {
+            handleLine(line);
+        }
+    }
+
     if (sampleReady) {
         // Process serial commands if available
-        if (Serial.available() > 0) {
-            String line = Serial.readStringUntil('\n');
-            line.trim();
-            if (line.length() > 0) {
-                handleLine(line);
-            }
-        }
+        
         
         if (running) {
             // Simple proportional control: adjust PWM duty cycle based on error between setpoint and measured ADC value.
             float error = consigne - currSamplet3;
-            float Kp = 20000.0; // Proportional gain (adjust as needed)
             float baseDuty = PWM_TOP / 2;
-            float control = baseDuty + (Kp * error);
-            if (control > PWM_TOP) control = PWM_TOP;
-            if (control < 0) control = 0;
+            integral += error * dt;
+            float control = baseDuty + (Kp * error) + (Ki * integral);
+
+            if (control > PWM_TOP){
+                control = PWM_TOP;
+                integral -= error * dt;
+            } 
+            if (control < 0){
+                control = 0;
+                integral += error * dt;
+            } 
             uint16_t pwmValue = (uint16_t) control;
             OCR1A = pwmValue;
             
@@ -271,6 +287,7 @@ void handleLine(const String &line) {
         running = true;
         Time = CurrentTime + Time;
         CurrentTime = 0;
+        integral = 0;
         Serial.println("Control loop ON");
     } else if (line.equalsIgnoreCase("S")) {
         running = false;
@@ -279,6 +296,7 @@ void handleLine(const String &line) {
         running = false;
         Time = CurrentTime + Time;
         CurrentTime = 0;
+        integral = 0;
         Serial.println("RESET - send new parameters via 'PARAM C=... F=...'");
     } else if (line.startsWith("PARAM")) {
         parseParameters(line);
@@ -290,35 +308,53 @@ void handleLine(const String &line) {
 
 void parseParameters(const String &line) {
     int indexC = line.indexOf("C=");
-    int indexF = line.indexOf("F=");
+    int indexI = line.indexOf("I=");
+    int indexK = line.indexOf("K=");
     if (indexC == -1) {
-        Serial.println("Invalid PARAM C syntax. Use: PARAM C=2.5 F=1.0");
+        Serial.println("Invalid PARAM C syntax. Use: PARAM C=2.5 I=1.0 K=0.5");
         Serial.println(line);
         return;
     }
-    if (indexF == -1) {
-        Serial.println("Invalid PARAM F syntax. Use: PARAM C=2.5 F=1.0");
+    if (indexI == -1) {
+        Serial.println("Invalid PARAM I syntax. Use: PARAM C=2.5 I=1.0 K=0.5");
+
+        return;
+    }
+    if (indexK == -1) {
+        Serial.println("Invalid PARAM I syntax. Use: PARAM C=2.5 I=1.0 K=0.5");
+
         return;
     }
     {
         int start = indexC + 2;
         int end = line.indexOf(' ', start);
         if (end == -1) {
-            end = indexF;
+            end = indexI;
         }
         String valC = line.substring(start, end);
         consigne = valC.toFloat();
     }
     {
-        int start = indexF + 2;
+        int start = indexI + 2;
         int end = line.indexOf(' ', start);
         if (end == -1) {
             end = line.length();
         }
-        String valF = line.substring(start, end);
+        String valI = line.substring(start, end);
         // Frequency parameter received but not reconfigured at runtime in this example.
-        Serial.print("New frequency parameter received (not applied at runtime): ");
-        Serial.println(valF);
+        Serial.print("New KI parameter received (not applied at runtime): ");
+        Serial.println(valI);
+    }
+    {
+        int start = indexK + 2;
+        int end = line.indexOf(' ', start);
+        if (end == -1) {
+            end = line.length();
+        }
+        String valK = line.substring(start, end);
+        // Frequency parameter received but not reconfigured at runtime in this example.
+        Serial.print("New KP parameter received (not applied at runtime): ");
+        Serial.println(valK);
     }
     Serial.print("New setpoint (consigne) -> ");
     Serial.println(consigne);
