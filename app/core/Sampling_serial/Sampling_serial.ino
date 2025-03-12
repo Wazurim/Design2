@@ -1,205 +1,212 @@
 /*
-  This sketch uses Timer1 in CTC mode with a computed OCR1A value to obtain an interrupt
-  frequency as close as possible to a desired value (10.2 Hz in this example).
+  Mega2560: Split Timers for Independent PWM and ADC Update Frequencies
+  
+  Timer1: Generates a 16-bit PWM on OC1A (pin 11) using full 16-bit resolution.
+          ICR1 is fixed to 65535, so the PWM duty cycle can range from 0 to 65535.
+          The PWM frequency is given by:
+              PWM Frequency = F_CPU / (PWM_PRESCALER * (65535 + 1))
+          Adjust PWM_PRESCALER to choose your PWM frequency.
 
-  In each Timer1 compare-match interrupt:
-    - We compute the exact elapsed time.
-    - We update a continuous sine wave value.
-    - When 0.5 seconds or more have elapsed since the last sample, we update a sampled (BOZ) value.
-    
-  The main loop then prints these values.
-
-  IMPORTANT: Avoid lengthy operations (like Serial printing) in the ISR.
-  Here, the ISR only updates shared variables and sets flags, and the main loop performs the printing.
+  Timer3: Runs in CTC mode to trigger an ADC update interrupt at DESIRED_ADC_UPDATE_FREQ.
+          OCR3A is computed from:
+              OCR3A = (F_CPU / (TIMER3_PRESCALER * DESIRED_ADC_UPDATE_FREQ)) - 1
+          This allows you to update your ADC at a different rate than the PWM frequency.
 */
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include <math.h>
 
+#ifndef F_CPU
+#define F_CPU 16000000UL
+#endif
 
+// *********** PWM (Timer1) Configuration ***********
+// Use full 16-bit resolution for PWM (0 to 65535)
+#define PWM_TOP 65535UL
+// Choose the Timer1 prescaler for PWM (available options: 1, 8, 64, 256, 1024)
+// For example, using 8 yields: PWM Frequency = 16e6 / (8 * 65536) ≈ 30.5 Hz
+#define PWM_PRESCALER 8UL
 
-#define F_CPU 16000000UL  
-#define DESIRED_FREQ 1 //doit etre <= 1 ou un exponent of 5 soit 5^x ou x entre 0 et 6 sinon il y a des incertitude sur le temps
-#define PRESCALER 1024      
-#define TIMER_TICKS (F_CPU / PRESCALER)
-#define TIMER_TICKS_PER_SECOND (TIMER_TICKS / DESIRED_FREQ)
-#define PWM_PIN 3
-#define CONTROL_PIN 7
-const uint16_t OCR1A_VALUE = (uint16_t)(TIMER_TICKS_PER_SECOND - 1);
+// Macro to compute actual PWM frequency (for info only)
+#define ACTUAL_PWM_FREQ (F_CPU / (PWM_PRESCALER * (PWM_TOP + 1)))
 
-volatile uint32_t gInterruptCount = 0;      
-volatile bool newSampleFlag = false;    //flag pour dire qu'il y a une nouvelle valeur qui doit etre sampler
-volatile float lastSampleTime = 0.0;    
-volatile bool pulseTriggerFlag = false; // Set in the ISR when a pulse is requested
+// *********** ADC Update (Timer3) Configuration ***********
+// Set the desired ADC update frequency in Hz (e.g., 1 Hz)
+#define DESIRED_ADC_UPDATE_FREQ 1.0
+// Choose Timer3 prescaler (e.g., 1024)
+#define TIMER3_PRESCALER 1024UL
+// Compute OCR3A value so that Timer3 fires at DESIRED_ADC_UPDATE_FREQ
+#define OCR3A_VALUE ((uint16_t)((F_CPU / (TIMER3_PRESCALER * DESIRED_ADC_UPDATE_FREQ)) - 1))
 
-// Variables used for the extended pulse (handled in the main loop)
-bool pulseActive = false;
-unsigned long pulseStartTime = 0;
-unsigned int extendedPulseDuration = 5; // Desired pulse duration in milliseconds
+// *****************************************************
 
-// Global Variables for ADC (3 channels)
-//-------------------------------------------------
-volatile uint16_t adcRawValue0 = 0; // ADC channel 0 (A0)
-volatile uint16_t adcRawValue1 = 0; // ADC channel 1 (A1)
+// Global variables for control and timing
+volatile uint32_t adcUpdateCount = 0;
+volatile bool newSampleFlag = false;
+
+// ADC raw values for 4 channels (A0 to A3)
+volatile uint16_t adcRawValue0 = 0;
+volatile uint16_t adcRawValue1 = 0;
 volatile uint16_t adcRawValue2 = 0;
-volatile uint16_t adcRawValue3 = 0; // ADC channel 2 (A2)
-volatile uint8_t currentADCChannel = 0; // Tracks which channel was just read
+volatile uint16_t adcRawValue3 = 0;
 
-// Sampled voltage values (updated every 0.5 s)
+// Converted ADC voltage values (assuming a 5 V reference)
 volatile float sampledVoltageA0 = 0.0;
 volatile float sampledVoltageA1 = 0.0;
 volatile float sampledVoltageA2 = 0.0;
 volatile float sampledVoltageA3 = 0.0;
 
+// Control loop variables
 bool running = false;
 float Time = 0;
 float CurrentTime = 0;
-// Mettre ici les valeurs parametres
+float consigne = 2.5; // Setpoint voltage
 
-float consigne = 2.5;
-
-
-
+// Forward declarations for serial command handling
 void handleLine(const String &line);
 void parseParameters(const String &line);
 
-ISR(TIMER1_COMPA_vect) {
-        
-    float period = (float)(OCR1A_VALUE + 1) / (float)TIMER_TICKS;
-    gInterruptCount++;  
-    float currentTime = gInterruptCount * period; 
-    
-    // Zone de travail pour l'interrupt, faire code interrupt ici
-    if ((currentTime - lastSampleTime) >= 0.5) {
-        // Convert the raw ADC value (0–1023) to a voltage (assuming 5 V reference)
-        sampledVoltageA0 = adcRawValue0 * (5.0 / 1023.0);
-        sampledVoltageA1 = adcRawValue1 * (5.0 / 1023.0);
-        sampledVoltageA2 = adcRawValue2 * (5.0 / 1023.0);
-        sampledVoltageA3 = adcRawValue3 * (5.0 / 1023.0);
-        newSampleFlag = true;
-        lastSampleTime = currentTime;
-    }
-    pulseTriggerFlag = true;
+//
+// Timer3 Compare Match A ISR
+// Fires at the rate defined by DESIRED_ADC_UPDATE_FREQ (e.g., 1 Hz)
+ISR(TIMER3_COMPA_vect) {
+    adcUpdateCount++;
+
+    // Convert the raw ADC values (0–1023) to voltages (assuming 5 V reference)
+    sampledVoltageA0 = adcRawValue0 * (5.0 / 1023.0);
+    sampledVoltageA1 = adcRawValue1 * (5.0 / 1023.0);
+    sampledVoltageA2 = adcRawValue2 * (5.0 / 1023.0);
+    sampledVoltageA3 = adcRawValue3 * (5.0 / 1023.0);
+
+    newSampleFlag = true;
 }
 
-//ISR(ADC_vect) {
-//    uint16_t adcValue = ADC; // Read the 10-bit ADC result
-//    if (currentADCChannel == 0) {
-//        
-//        adcRawValue0 = adcValue;
-//        currentADCChannel = 1;
-//        ADMUX = (ADMUX & 0xF0) | 0x01; // Select ADC1 (A1)
-//    } else if (currentADCChannel == 1) {
-//        adcRawValue1 = adcValue;
-//        currentADCChannel = 2;
-//        ADMUX = (ADMUX & 0xF0) | 0x02; // Select ADC2 (A2)
-//    } else if (currentADCChannel == 2) {
-//        adcRawValue2 = adcValue;
-//        currentADCChannel = 0;
-//        ADMUX = (ADMUX & 0xF0) | 0x00; // Re-select ADC0 (A0)
-//    }
-//}
-
+//
+// ADC Conversion Complete ISR
+// The ADC is running in free-running mode and continuously updates the raw values.
 ISR(ADC_vect) {
-    // Read ADC0 (first conversion is already completed when ISR triggers)
-    _delay_us(10);  
-    adcRawValue0 = ADC;  
-
+    _delay_us(10);
+    adcRawValue0 = ADC;
+    
     // Switch to ADC1
     ADMUX = (ADMUX & 0xF0) | 0x01;
-    //ADMUX = (ADMUX & 0xF0) | 0x02;
-    _delay_us(10); // Allow voltage to stabilize
-    ADCSRA |= (1 << ADSC);  // Start ADC1 conversion
-    while (ADCSRA & (1 << ADSC));  // Wait for ADC1 conversion to complete
-    adcRawValue1 = ADC;  // Read ADC1
-
+    _delay_us(10);
+    ADCSRA |= (1 << ADSC);  // Start ADC conversion on ADC1
+    while (ADCSRA & (1 << ADSC));
+    adcRawValue1 = ADC;
+    
     // Switch to ADC2
     ADMUX = (ADMUX & 0xF0) | 0x02;
-    //ADMUX = (ADMUX & 0xF0) | 0x00;
-    _delay_us(10); // Allow voltage to stabilize
-    ADCSRA |= (1 << ADSC);  // Start ADC2 conversion
-    while (ADCSRA & (1 << ADSC));  // Wait for ADC2 conversion to complete
-    adcRawValue2 = ADC;  // Read ADC2
-
+    _delay_us(10);
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+    adcRawValue2 = ADC;
+    
     // Switch to ADC3
     ADMUX = (ADMUX & 0xF0) | 0x03;
-    //ADMUX = (ADMUX & 0xF0) | 0x00;
-    _delay_us(10); // Allow voltage to stabilize
-    ADCSRA |= (1 << ADSC);  // Start ADC3 conversion
-    while (ADCSRA & (1 << ADSC));  // Wait for ADC3 conversion to complete
-    adcRawValue3 = ADC;  // Read ADC3
-
-    // Switch back to ADC0 for next cycle
+    _delay_us(10);
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC));
+    adcRawValue3 = ADC;
+    
+    // Switch back to ADC0 for the next cycle
     ADMUX = (ADMUX & 0xF0) | 0x00;
-    //ADMUX = (ADMUX & 0xF0) | 0x01;
-    ADCSRA |= (1 << ADSC);  // Start ADC0 conversion for the next ISR cycle
-
-     // Indicate that all three samples are ready
+    ADCSRA |= (1 << ADSC);
 }
 
-
+//
+// ADC Initialization: uses AVcc as reference and enables ADC interrupts.
 void ADC_Init() {
-    ADMUX = (1 << REFS0);  // Use AVcc as the reference voltage, input on ADC0 (A0)
-    // Enable ADC, its interrupt, auto-triggering (free-running mode), and set a prescaler.
-    ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADPS2) | (1 << ADPS1); 
-    DIDR0 = 0x07;  // Disable digital input buffers on ADC0, ADC1, and ADC2
+    ADMUX = (1 << REFS0); // Use AVcc as reference
+    ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADPS2) | (1 << ADPS1);
+    DIDR0 = 0x0F; // Disable digital input buffers on ADC0-ADC3
 }
 
-void triggerExtendedPulse(unsigned int duration) {
-    digitalWrite(CONTROL_PIN, HIGH);
-    pulseActive = true;
-    pulseStartTime = millis();
-    extendedPulseDuration = duration;
-}
-
+//
+// Setup function
 void setup() {
     Serial.begin(115200);
-    ADC_Init();  
-    ADCSRA |= (1 << ADSC);
+    ADC_Init();
+    ADCSRA |= (1 << ADSC);  // Start ADC conversions in free-running mode
 
-    pinMode(PWM_PIN, OUTPUT);
+    // Set pin 11 as PWM output (OC1A)
+    pinMode(11, OUTPUT);
 
-    pinMode(CONTROL_PIN, OUTPUT);
-    digitalWrite(CONTROL_PIN, LOW);
-    
-  // --- Timer1 Setup ---
-    cli();  // deactive les interrupt
+    cli(); // Disable interrupts during timer configuration
+
+    // ---------- Timer1 Setup: 16-bit PWM on OC1A ----------
+    // Clear Timer1 registers
     TCCR1A = 0;
     TCCR1B = 0;
-    TCCR1B |= (1 << WGM12); // mode clear on compare match (reset le timer quand ca interrupt)
-    OCR1A = OCR1A_VALUE; //compare register value
-    TCCR1B |= (1 << CS12) | (1 << CS10); // prescaller of 1024
-    TIMSK1 |= (1 << OCIE1A);  // Enable Timer1 compare-match interrupt
-    sei(); //rearme les interrupt
+    // Configure Timer1 for Fast PWM mode with ICR1 as TOP (Mode 14: WGM13=1, WGM12=1, WGM11=1)
+    // Setting COM1A1 enables non-inverting PWM on OC1A (digital pin 11)
+    TCCR1A |= (1 << COM1A1) | (1 << WGM11);
+    TCCR1B |= (1 << WGM13) | (1 << WGM12);
+    // Set Timer1 prescaler bits according to PWM_PRESCALER
+    // For PWM_PRESCALER=8, set CS10=1 and CS11=1 (see datasheet for Mega2560 Timer1 prescaler settings)
+    // (For Mega2560, prescaler bits for Timer1: CS12:0; for prescaler=8: CS11=1, others 0)
+    TCCR1B |= (1 << CS11);
+    // Set TOP for full 16-bit resolution
+    ICR1 = PWM_TOP;
+    // Set initial duty cycle to 50% (OCR1A = PWM_TOP/2)
+    OCR1A = PWM_TOP / 2;
 
-    Serial.println("Arduino started. Waiting for commands...");
-    Serial.println("Available commands:");
-    Serial.println("  p                   -> Start sending sine wave");
-    Serial.println("  S                   -> Stop sending");
-    Serial.println("  R                   -> Reset & prompt for new parameters");
-    Serial.println("  PARAM C=2.0 F=0.5   -> Set Consigne/frequency");
-    Serial.println();
+    // ---------- Timer3 Setup: ADC Update Interrupt ----------
+    // Clear Timer3 registers
+    TCCR3A = 0;
+    TCCR3B = 0;
+    // Configure Timer3 in CTC mode (Clear Timer on Compare Match, WGM32=1)
+    TCCR3B |= (1 << WGM32);
+    // Set Timer3 prescaler to TIMER3_PRESCALER (e.g., 1024)
+    // For Timer3 on Mega2560, prescaler=1024 is set by CS32 and CS30 bits
+    TCCR3B |= (1 << CS32) | (1 << CS30);
+    // Set OCR3A for the desired ADC update frequency
+    OCR3A = OCR3A_VALUE;
+    // Enable Timer3 Compare Match A interrupt
+    TIMSK3 |= (1 << OCIE3A);
 
+    sei(); // Re-enable interrupts
+
+    Serial.println("Mega2560 started with split timers:");
+    Serial.print("PWM Frequency (Timer1): ");
+    Serial.print(ACTUAL_PWM_FREQ);
+    Serial.println(" Hz (using full 16-bit resolution)");
+    Serial.print("ADC Update Frequency (Timer3): ");
+    Serial.print(DESIRED_ADC_UPDATE_FREQ);
+    Serial.println(" Hz");
+    Serial.println("Enter commands:");
+    Serial.println("  p    -> start control loop");
+    Serial.println("  S    -> stop control loop");
+    Serial.println("  R    -> reset and new parameters");
+    Serial.println("  PARAM C=2.5 F=1.0  -> set parameters (C = setpoint, F = frequency)");
 }
 
+//
+// Main loop: When a new ADC sample is ready, update the PWM duty cycle based on control calculations.
 void loop() {
     noInterrupts();
     bool sampleReady = newSampleFlag;
-    float currSamplet2 = sampledVoltageA0; //t2
-    float currSamplet4 = sampledVoltageA1; //t4
-    float currSamplet1 = sampledVoltageA2; //t1
-    float currSamplet3 = sampledVoltageA3; //t3
-    uint32_t interruptSnapshot = gInterruptCount;
-    const float period = (float)(OCR1A_VALUE + 1) / (float)TIMER_TICKS;
-    CurrentTime = interruptSnapshot * period - Time;
-    float trueTime = interruptSnapshot * period;
+    // Copy the latest ADC voltage values to temporary variables
+    float currSamplet2 = sampledVoltageA0;
+    float currSamplet4 = sampledVoltageA1;
+    float currSamplet1 = sampledVoltageA2;
+    float currSamplet3 = sampledVoltageA3; // Used for control error computation
+    uint32_t updateCountSnapshot = adcUpdateCount;
+    
+    // Calculate PWM period (in seconds):
+    // PWM period = (PWM_TOP + 1) * (PWM_PRESCALER / F_CPU)
+    float pwmPeriod = (float)(PWM_TOP + 1) * ((float)PWM_PRESCALER / F_CPU);
+    // Derive true time from ADC update count
+    float trueTime = updateCountSnapshot / DESIRED_ADC_UPDATE_FREQ;
+    CurrentTime = trueTime - Time;
+    
     if (sampleReady) newSampleFlag = false;
     interrupts();
-
+    
     if (sampleReady) {
-        /**/
-
+        // Process serial commands if available
         if (Serial.available() > 0) {
             String line = Serial.readStringUntil('\n');
             line.trim();
@@ -207,137 +214,112 @@ void loop() {
                 handleLine(line);
             }
         }
-
-
-        if (running){
-            float error = consigne - currSamplet3;
-            float Kp = 100.0;      // Proportional gain (adjust as needed)
-            float baseDuty = 128;  // Base duty cycle (midpoint of 0–255)
-            float control = baseDuty + (Kp * error);
-            // Clamp control value to [0, 255]
-            if (control > 255) control = 255;
-            if (control < 0) control = 0;
-            uint8_t pwmValue = (uint8_t) control;
-
-            // Output the PWM signal on PWM_PIN
-            analogWrite(PWM_PIN, pwmValue);
-
-            Serial.print(trueTime * 1000, 1);  // Time in ms
-            Serial.print(", ");
-            Serial.print(CurrentTime* 1000);  // Time in ms
-            Serial.print(", ");
-            Serial.print(currSamplet1, 3); 
-            Serial.print(", ");
-            Serial.print(currSamplet2, 3);
-            Serial.print(", ");
-            Serial.print(currSamplet3, 3);
-            Serial.print(", ");
-            Serial.print(currSamplet4, 3);
-            Serial.print("\t\t                  ");
-            Serial.print("PWM Output: ");
-            Serial.println(pwmValue);
-
-        }
-        else
-        {
-            analogWrite(PWM_PIN, 128);
-            Serial.print(trueTime * 1000, 1);  // Time in ms
-            Serial.print(", ");  // Set PWM to mid-point (50% duty cycle) = no commands sent
-
-            Serial.print(CurrentTime* 1000);  // Time in ms
-            Serial.print(", ");
-
-            Serial.println("Asservissement OFF: PWM Output: 128");
-        }
         
-    }
-
-    if (pulseTriggerFlag) {
-        pulseTriggerFlag = false; // Clear the flag
-        // Call the function to start the extended pulse with a desired duration (in ms)
-        triggerExtendedPulse(5);  // For example, a 50 ms pulse
-    }
-    
-    // If a pulse is active and the desired duration has elapsed, turn the pulse off.
-    if (pulseActive && (millis() - pulseStartTime >= extendedPulseDuration)) {
-        digitalWrite(CONTROL_PIN, LOW);
-        pulseActive = false;
+        if (running) {
+            // Simple proportional control: adjust PWM duty cycle based on error between setpoint and measured ADC value.
+            float error = consigne - currSamplet3;
+            float Kp = 20000.0; // Proportional gain (adjust as needed)
+            float baseDuty = PWM_TOP / 2;
+            float control = baseDuty + (Kp * error);
+            if (control > PWM_TOP) control = PWM_TOP;
+            if (control < 0) control = 0;
+            uint16_t pwmValue = (uint16_t) control;
+            OCR1A = pwmValue;
+            
+            Serial.print(trueTime * 1000, 1);  // Time in ms
+            Serial.print(" ms \t| PWM duty: ");
+            Serial.print(pwmValue);
+            Serial.print(" / ");
+            Serial.print(PWM_TOP);
+            Serial.print(" | ADC t1: ");
+            Serial.print(currSamplet1, 3);
+            Serial.print(" | ADC t2: ");
+            Serial.print(currSamplet2, 3);
+            Serial.print(" | ADC t3: ");
+            Serial.print(currSamplet3, 3);
+            Serial.print(" | ADC t4: ");
+            Serial.print(currSamplet4, 3);
+            Serial.print(" |\t\t error: ");
+            Serial.print(error, 3);
+            Serial.print(" | Control: ");
+            Serial.println(control, 3);
+        }
+        else {
+            OCR1A = PWM_TOP / 2;
+            Serial.print(trueTime * 1000, 1);
+            Serial.print(" ms \t| PWM duty: ");
+            Serial.print(PWM_TOP / 2);
+            Serial.print(" / ");
+            Serial.print(PWM_TOP);
+            Serial.print(" | ADC t1: ");
+            Serial.print(currSamplet1, 3);
+            Serial.print(" | ADC t2: ");
+            Serial.print(currSamplet2, 3);
+            Serial.print(" | ADC t3: ");
+            Serial.print(currSamplet3, 3);
+            Serial.print(" | ADC t4: ");
+            Serial.print(currSamplet4, 3);
+            Serial.println("\t Control OFF");
+        }
     }
 }
 
+//
+// Serial command processing functions
 void handleLine(const String &line) {
-    // Single-character commands
     if (line.equalsIgnoreCase("p")) {
         running = true;
         Time = CurrentTime + Time;
         CurrentTime = 0;
-        Serial.println("Asservissement ON");
-    }
-    else if (line.equalsIgnoreCase("S")) {
+        Serial.println("Control loop ON");
+    } else if (line.equalsIgnoreCase("S")) {
         running = false;
-        Serial.println("Asservissement OFF");
-    }
-    else if (line.equalsIgnoreCase("R")) {
+        Serial.println("Control loop OFF");
+    } else if (line.equalsIgnoreCase("R")) {
         running = false;
         Time = CurrentTime + Time;
         CurrentTime = 0;
-
-        Serial.println("RESET - send new parameters via 'PARAM A=... F=...'");
-    }
-    // Parameter command
-    else if (line.startsWith("PARAM")) {
+        Serial.println("RESET - send new parameters via 'PARAM C=... F=...'");
+    } else if (line.startsWith("PARAM")) {
         parseParameters(line);
-    }
-    // Unknown
-    else {
+    } else {
         Serial.print("Unknown command or format: ");
         Serial.println(line);
     }
 }
 
 void parseParameters(const String &line) {
-    // For example: "PARAM A=2.0 F=0.5"
-    // We look for "A=" and "F="
-    int indexC = line.indexOf("C="); // consigne temp in voltage 2.5 = no change
+    int indexC = line.indexOf("C=");
     int indexF = line.indexOf("F=");
     if (indexC == -1) {
-        Serial.println("Invalid PARAM C syntax. Use: PARAM C=2.0 F=0.5");
+        Serial.println("Invalid PARAM C syntax. Use: PARAM C=2.5 F=1.0");
         Serial.println(line);
         return;
     }
     if (indexF == -1) {
-        Serial.println("Invalid PARAM F syntax. Use: PARAM C=2.0 F=0.5");
+        Serial.println("Invalid PARAM F syntax. Use: PARAM C=2.5 F=1.0");
         return;
     }
     {
-        // Start right after "A="
         int start = indexC + 2;
-        // End at the first space after "A=", or if none found, just before "F="
         int end = line.indexOf(' ', start);
         if (end == -1) {
-          // If there's no space, stop where "F=" begins
             end = indexF;
         }
         String valC = line.substring(start, end);
         consigne = valC.toFloat();
-        }
-    
-      // Extract frequency substring
-        {
+    }
+    {
         int start = indexF + 2;
-        // End at space or end of string
         int end = line.indexOf(' ', start);
         if (end == -1) {
             end = line.length();
         }
         String valF = line.substring(start, end);
-        //freq = valF.toFloat();
-        }
-    
-      // Display the newly set parameters
-        Serial.print("New parameters -> Consigne: ");
-        Serial.print(consigne);
-        //Serial.print(" , Frequency: ");
-        //Serial.println(freq);
+        // Frequency parameter received but not reconfigured at runtime in this example.
+        Serial.print("New frequency parameter received (not applied at runtime): ");
+        Serial.println(valF);
     }
-    
+    Serial.print("New setpoint (consigne) -> ");
+    Serial.println(consigne);
+}
