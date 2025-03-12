@@ -72,7 +72,7 @@ const float dt = 1/DESIRED_ADC_UPDATE_FREQ; // Assuming your ADC update is 1 Hz
 // Forward declarations for serial command handling
 void handleLine(const String &line);
 void parseParameters(const String &line);
-
+float voltage_to_temp(float volt);
 //
 // Timer3 Compare Match A ISR
 // Fires at the rate defined by DESIRED_ADC_UPDATE_FREQ (e.g., 1 Hz)
@@ -248,13 +248,13 @@ void loop() {
             Serial.print(" / ");
             Serial.print(PWM_TOP);
             Serial.print(" | ADC t1: ");
-            Serial.print(currSamplet1, 3);
+            Serial.print(voltage_to_temp(currSamplet1), 3);
             Serial.print(" | ADC t2: ");
-            Serial.print(currSamplet2, 3);
+            Serial.print(voltage_to_temp(currSamplet2), 3);
             Serial.print(" | ADC t3: ");
-            Serial.print(currSamplet3, 3);
+            Serial.print(voltage_to_temp(currSamplet3), 3);
             Serial.print(" | ADC t4: ");
-            Serial.print(currSamplet4, 3);
+            Serial.print(voltage_to_temp(currSamplet4), 3);
             Serial.print(" |\t\t error: ");
             Serial.print(error, 3);
             Serial.print(" | Control: ");
@@ -268,13 +268,13 @@ void loop() {
             Serial.print(" / ");
             Serial.print(PWM_TOP);
             Serial.print(" | ADC t1: ");
-            Serial.print(currSamplet1, 3);
+            Serial.print(voltage_to_temp(currSamplet1), 3);
             Serial.print(" | ADC t2: ");
-            Serial.print(currSamplet2, 3);
+            Serial.print(voltage_to_temp(currSamplet2), 3);
             Serial.print(" | ADC t3: ");
-            Serial.print(currSamplet3, 3);
+            Serial.print(voltage_to_temp(currSamplet3), 3);
             Serial.print(" | ADC t4: ");
-            Serial.print(currSamplet4, 3);
+            Serial.print(voltage_to_temp(currSamplet4), 3);
             Serial.println("\t Control OFF");
         }
     }
@@ -358,4 +358,16 @@ void parseParameters(const String &line) {
     }
     Serial.print("New setpoint (consigne) -> ");
     Serial.println(consigne);
+}
+
+float voltage_to_temp(float volt) {
+    const float A1 = 0.00335401643468053;
+    const float B1 = 0.000256523550896126;
+    const float C1 = 0.00000260597012072052;
+    const float D1 = 0.000000063292612648746;
+    const float RT = 10000.0;
+    float res = 5 * (10000 - 2000 * volt) / volt;
+    float logVal = std::log(RT / res);
+    float temp = 1.0 / (A1 + B1 * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
+    return temp;
 }
