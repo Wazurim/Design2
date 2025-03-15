@@ -57,7 +57,7 @@ class SerialMonitor(QWidget):
 
         # ----- 1) Open the serial port -----
         try:
-            self.ser = serial.Serial(port, baudrate, timeout=1)
+            # self.ser = serial.Serial(port, baudrate, timeout=1)
             time.sleep(2)  # small delay in case Arduino resets on open
         except Exception as e:
             raise RuntimeError(f"Could not open serial port {port}: {e}")
@@ -65,8 +65,8 @@ class SerialMonitor(QWidget):
         self.lineReceived.connect(self.append_line)
 
         # ----- 2) Start a background thread to read incoming data -----
-        self.read_thread = SerialReadThread(self.ser, self.on_line_received)
-        self.read_thread.start()
+        # self.read_thread = SerialReadThread(self.ser, self.on_line_received)
+        # self.read_thread.start()
 
         # ----- 3) Build the UI layout -----
         layout = QVBoxLayout()

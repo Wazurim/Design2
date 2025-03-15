@@ -3,7 +3,7 @@ import numpy as np
 
 class Plate:#117.21, 61.6
     def __init__(self, total_time=500, lx=117e-3, ly=62e-3, thickness=1.6e-3, n=117, k=350, rho=2700,
-                 cp=896, h_convection=13.5, amp_in=-0.824, power_transfer=-1.4, ambient_temp=23.8, initial_plate_temp=0,
+                 cp=896, h_convection=13.5, amp_in=-0.824, power_transfer=-1.5, ambient_temp=23.8, initial_plate_temp=0,
                  position_heat_source=(16, 31), positions_thermistances=[(16, 31), (61, 31), (106, 31)],
                  start_heat_time=10, stop_heat_time=1027):
         #TODO: make positions change according to lx, ly not n
