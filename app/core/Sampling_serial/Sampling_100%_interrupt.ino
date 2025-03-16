@@ -222,29 +222,39 @@ void loop() {
         
         
         if (running) {
-            // Simple proportional control: adjust PWM duty cycle based on error between setpoint and measured ADC value.
+
+
             float error = consigne - voltage_to_tempt3(currSamplet3);
-            float baseDuty = PWM_TOP / 2;
-            //float control = ((0.8603f/(previous - 0.9805)) * (5-error) + 2.5)*PWM_TOP/5;
-            previous = error;
-            const float dt = 1/DESIRED_ADC_UPDATE_FREQ; 
-            integral += error - previous;
-            float control = -(error *Kp + integral *Ki) * PWM_TOP/10;
+            const float dt = 1.0f / DESIRED_ADC_UPDATE_FREQ;
 
-            //if (control > 25) {
-            //    control = 25;
-            //}
+            // Apply low-pass filter to reduce noise
+            #define ALPHA 0.1
+            error = ALPHA * error + (1 - ALPHA) * previous;
 
-            control +=  PWM_TOP/2;
+            integral += error * dt; // Correct integral accumulation
 
-            if (control > PWM_TOP-750){
-                control = PWM_TOP-750;
-                //integral -= error;
+            // Compute PI control output
+            float control = -(error * Kp + integral * Ki) * PWM_TOP / 10;
+            control += PWM_TOP / 2; // Shift midpoint
+
+            // Implement anti-windup
+            if (control > PWM_TOP - 750) {
+                control = PWM_TOP - 750;
+                integral -= error * dt;  
             } 
-            if (control < 750){
+            if (control < 750) {
                 control = 750;
-                //integral -= error;
-            } 
+                integral -= error * dt;  
+            }
+
+            // Set PWM output
+            uint16_t pwmValue = (uint16_t) control;
+            OCR1A = pwmValue;
+
+            // Store error for next cycle
+            previous = error;
+
+            //float control = ((0.8603f/(previous - 0.9805)) * (5-error) + 2.5)*PWM_TOP/5;           
             uint16_t pwmValue = (uint16_t) control;
             OCR1A = pwmValue;
             
