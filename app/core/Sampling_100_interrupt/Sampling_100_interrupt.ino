@@ -82,22 +82,14 @@ ISR(TIMER3_COMPA_vect) {
     ADMUX = (ADMUX & 0xF8) | currentChannel; // Select channel 0
     ADCSRA |= (1 << ADSC); // Start ADC conversion
 
-    '''
-    // Convert the raw ADC values (0–1023) to voltages (assuming 5 V reference)
-    sampledVoltageA0 = adcRawValue0 * (5.0 / 1023.0);
-    sampledVoltageA1 = adcRawValue1 * (5.0 / 1023.0);
-    sampledVoltageA2 = adcRawValue2 * (5.0 / 1023.0);
-    sampledVoltageA3 = adcRawValue3 * (5.0 / 1023.0);
-
-    newSampleFlag = true;
-    '''
+    
 }
 
 //
 // ADC Conversion Complete ISR
 // The ADC is running in free-running mode and continuously updates the raw values.
 ISR(ADC_vect) {
-    _adcValues[currentChannel] = ADC; // Read ADC result
+    adcRawValues[currentChannel] = ADC; // Read ADC result
 
     if (currentChannel < 3) {
         currentChannel++; // Move to the next channel
@@ -255,8 +247,6 @@ void loop() {
             previous = error;
 
             //float control = ((0.8603f/(previous - 0.9805)) * (5-error) + 2.5)*PWM_TOP/5;           
-            uint16_t pwmValue = (uint16_t) control;
-            OCR1A = pwmValue;
             
             Serial.print(trueTime * 1000, 1);  // Time in ms
             Serial.print(" ms \t| PWM duty: ");
