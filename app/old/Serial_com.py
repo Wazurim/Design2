@@ -4,7 +4,7 @@ import serial
 import time
 
 class SerialGUI:
-    def __init__(self, root, port, baud):
+    def __init__(self, root, port, baud, fake):
         self.root = root
         self.port = port
         self.baud = baud
@@ -31,15 +31,20 @@ class SerialGUI:
         self.param_frame = tk.Frame(root)
         self.param_frame.pack(pady=5)
 
-        tk.Label(self.param_frame, text="Amplitude:").grid(row=0, column=0, padx=5)
-        self.entry_amp = tk.Entry(self.param_frame, width=8)
-        self.entry_amp.insert(0, "1.0")  # Valeur par défaut
-        self.entry_amp.grid(row=0, column=1, padx=5)
+        tk.Label(self.param_frame, text="Commande:").grid(row=0, column=0, padx=5)
+        self.entry_con = tk.Entry(self.param_frame, width=8)
+        self.entry_con.insert(0, "25.0")  # Valeur par défaut
+        self.entry_con.grid(row=0, column=1, padx=5)
 
-        tk.Label(self.param_frame, text="Fréquence:").grid(row=1, column=0, padx=5)
-        self.entry_freq = tk.Entry(self.param_frame, width=8)
-        self.entry_freq.insert(0, "0.1")  # Valeur par défaut
-        self.entry_freq.grid(row=1, column=1, padx=5)
+        tk.Label(self.param_frame, text="Ki:").grid(row=1, column=0, padx=5)
+        self.entry_ki = tk.Entry(self.param_frame, width=8)
+        self.entry_ki.insert(0, "1.0")  # Valeur par défaut
+        self.entry_ki.grid(row=1, column=1, padx=5)
+
+        tk.Label(self.param_frame, text="Kp:").grid(row=2, column=0, padx=5)
+        self.entry_kp = tk.Entry(self.param_frame, width=8)
+        self.entry_kp.insert(0, "0.5")  # Valeur par défaut
+        self.entry_kp.grid(row=2, column=1, padx=5)
 
         self.btn_send_param = tk.Button(self.param_frame, text="Send Param", command=self.send_params)
         self.btn_send_param.grid(row=2, column=0, columnspan=2, pady=5)
@@ -74,11 +79,12 @@ class SerialGUI:
     def send_params(self):
         """
         Récupère l'amplitude et la fréquence saisies,
-        et envoie la commande "PARAM A=... F=..."
+        et envoie la commande "PARAM C=... I=... K=..." 
         """
-        amplitude = self.entry_amp.get()
-        frequency = self.entry_freq.get()
-        cmd = f"PPARAM A={amplitude} F={frequency}\n"
+        consigne = self.entry_con.get()
+        ki = self.entry_ki.get()
+        kp = self.entry_kp.get()
+        cmd = f"PARAM C={consigne} I={ki} K={kp}\n"
         self.ser.write(cmd.encode('ascii'))
         self.print_line(cmd)
 
@@ -93,7 +99,7 @@ def main():
     root.title("Exemple Serial + Tkinter: Paramètres")
 
     # Adapter le port (ex: "COM3" ou "/dev/ttyACM0") et le baudrate
-    app = SerialGUI(root, port="COM3", baud=115200)
+    app = SerialGUI(root, port="COM3", baud=115200, fake=True)
 
     def on_closing():
         app.close()

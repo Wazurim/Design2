@@ -88,11 +88,14 @@ class SerialMonitor(QWidget):
         # 3.2) Param row (Amplitude, Frequency) + "Send Param" button
         param_layout = QHBoxLayout()
         param_layout.addWidget(QLabel("Consigne:"))
-        self.input_amp = QLineEdit("1.0")
-        param_layout.addWidget(self.input_amp)
-        param_layout.addWidget(QLabel("Frequence:"))
-        self.input_freq = QLineEdit("1")
-        param_layout.addWidget(self.input_freq)
+        self.input_con = QLineEdit("25.0")
+        param_layout.addWidget(self.input_con)
+        param_layout.addWidget(QLabel("Ki:"))
+        self.input_Ki = QLineEdit("1.0")
+        param_layout.addWidget(self.input_Ki)
+        param_layout.addWidget(QLabel("Kp:"))
+        self.input_Kp = QLineEdit("0.5")
+        param_layout.addWidget(self.input_Kp)
         self.btn_param = QPushButton("Send Param")
         param_layout.addWidget(self.btn_param)
         layout.addLayout(param_layout)
@@ -101,7 +104,7 @@ class SerialMonitor(QWidget):
         # 3.3) A text field to send a raw command
         raw_cmd_layout = QHBoxLayout()
         raw_cmd_layout.addWidget(QLabel("Raw Command:"))
-        self.input_raw_cmd = QLineEdit("")
+        self.input_raw_cmd = QLineEdit("PARAM C=25.0 I=1.0 K=0.5")
         raw_cmd_layout.addWidget(self.input_raw_cmd)
         self.btn_send_raw = QPushButton("Send")
         raw_cmd_layout.addWidget(self.btn_send_raw)
@@ -137,12 +140,13 @@ class SerialMonitor(QWidget):
         self._send_line("S")
 
     def send_reset(self):
-        self._send_line("R")
+        self._send_line("PARAM C=25.0 I=1.0 K=0.5")
 
     def send_param(self):
-        amp = self.input_amp.text().strip()
-        freq = self.input_freq.text().strip()
-        cmd = f"PARAM C={amp} F={freq}"
+        con = self.input_con.text().strip()
+        Ki = self.input_Ki.text().strip()
+        Kp = self.input_Kp.text().strip()
+        cmd = f"PARAM C={con} I={Ki} K={Kp}"
         self._send_line(cmd)
 
     def send_raw_cmd(self):
@@ -170,6 +174,8 @@ class SerialMonitor(QWidget):
 def main():
     app = QApplication(sys.argv)
     window = SerialMonitor(port="COM5", baudrate=115200)
+    window = SerialMonitor(port="COM3", baudrate=115200)
+
     
     # Get the primary screen's available geometry
     screen = app.primaryScreen()
