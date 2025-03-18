@@ -64,8 +64,10 @@ float consigne = 25; // Setpoint voltage
 
 float Kp = 0.88;   // Start with a low value; adjust experimentally.
 float Ki = 1/101.72;   // Start with a low value; adjust experimentally.
-float previous = PWM_TOP/2;
-float integral = 0;
+// float previous = PWM_TOP/2;
+float previous_control = 0;
+float previous_error = 0;
+// float integral = 0;
 const float dt = 1/DESIRED_ADC_UPDATE_FREQ; // Assuming your ADC update is 1 Hz
 
 // Forward declarations for serial command handling
@@ -223,21 +225,45 @@ void loop() {
             #define ALPHA 0.1
             error = ALPHA * error + (1 - ALPHA) * previous;
 
-            integral += error * dt; // Correct integral accumulation
+            // integral += error * dt; // Correct integral accumulation
 
             // Compute PI control output
-            float control = -(error * Kp + integral * Ki) * PWM_TOP / 10;
-            control += PWM_TOP / 2; // Shift midpoint
+            // float control = -(error * Kp + integral * Ki) * PWM_TOP / 10;
+            // control += PWM_TOP / 2; // Shift midpoint
+
+            // Si on trouve un nouveau PI, il faudra recalculer l'équation de récurrence
+            // et ensuite changer les valeurs ici. Les valeurs ne sont pas directement celles du PI.
+            // Vous pouvez regarder mes notes voir s'il n'y a pas une formule qui permet la conversion
+            // directe.
+            float control = previous_control + error * 0.525f - previous_error * 0.475f;
+
+            // Adjust for operation point
+            control += 2.5f;
+
+            // Anti-windup
+            if (control > 4.9f) {
+                control = 4.9f
+            }
+            else if (control < 0.1f) {
+                control = 0.1f;
+            }
+
+            // Set previous values before going into PWM.
+            previous_control = control;
+            previous_error = error;
+
+            // Convert volts to PWM
+            control = (control/4.9f) * PWM_TOP;
 
             // Implement anti-windup
-            if (control > PWM_TOP - 750) {
-                control = PWM_TOP - 750;
-                integral -= error * dt;  
-            } 
-            if (control < 750) {
-                control = 750;
-                integral -= error * dt;  
-            }
+            // if (control > PWM_TOP - 750) {
+            //     control = PWM_TOP - 750;
+            //     // integral -= error * dt;
+            // } 
+            // if (control < 750) {
+            //     control = 750;
+            //     integral -= error * dt;  
+            // }
 
             // Set PWM output
             uint16_t pwmValue = (uint16_t) control;
