@@ -222,8 +222,8 @@ void loop() {
             const float dt = 1.0f / DESIRED_ADC_UPDATE_FREQ;
 
             // Apply low-pass filter to reduce noise
-            #define ALPHA 0.1
-            error = ALPHA * error + (1 - ALPHA) * previous;
+            //#define ALPHA 0.1
+            //error = ALPHA * error + (1 - ALPHA) * previous;
 
             // integral += error * dt; // Correct integral accumulation
 
@@ -235,21 +235,21 @@ void loop() {
             // et ensuite changer les valeurs ici. Les valeurs ne sont pas directement celles du PI.
             // Vous pouvez regarder mes notes voir s'il n'y a pas une formule qui permet la conversion
             // directe.
-            float control = previous_control + error * 0.525f - previous_error * 0.475f;
-
+            float control = -(previous_control + error * 0.525f - previous_error * 0.475f);
+            previous_control = -control;
             // Adjust for operation point
             control += 2.5f;
 
             // Anti-windup
             if (control > 4.9f) {
-                control = 4.9f
+                control = 4.9f;
             }
             else if (control < 0.1f) {
                 control = 0.1f;
             }
 
             // Set previous values before going into PWM.
-            previous_control = control;
+            
             previous_error = error;
 
             // Convert volts to PWM
@@ -270,7 +270,7 @@ void loop() {
             OCR1A = pwmValue;
 
             // Store error for next cycle
-            previous = error;
+            //previous = error;
 
             //float control = ((0.8603f/(previous - 0.9805)) * (5-error) + 2.5)*PWM_TOP/5;           
             
@@ -290,7 +290,7 @@ void loop() {
             Serial.print(" |\t\t error: ");
             Serial.print(error, 3);
             Serial.print(" | Integral: ");
-            Serial.println(integral, 3);
+            //Serial.println(integral, 3);
         }
         else {
             OCR1A = PWM_TOP / 2;
@@ -417,3 +417,4 @@ float voltage_to_tempt3(float volt) {
     float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
     return temp;
 }
+
