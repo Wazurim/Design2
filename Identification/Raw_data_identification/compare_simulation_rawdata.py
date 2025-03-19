@@ -14,7 +14,7 @@ for line in f:
     test_temp2.append(float(eachItem[3]))
     test_temp3.append(float(eachItem[4]))
 
-nomfichier = "thermistance3_temp_thick1.82_rho2333.txt"
+nomfichier = "thermistance3_temp_k350_pt1.3.txt"
 f = open(nomfichier, "r")
 
 simul_time = []
