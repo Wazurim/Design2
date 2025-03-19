@@ -42,7 +42,7 @@ time_array = np.array(time_list)
 
 # Sauvegarde des données dans un fichier compressé
 # np.savez_compressed("temperature_data.npz", temps=temps_array, time=time_array, X=plate.X, Y=plate.Y)
-np.savetxt('thermistance3_temp.txt', np.transpose([time_array, thermistance1_temps, thermistance2_temps, thermistance3_temps]))
+np.savetxt('thermistance3_temp_thick1.82_rho2333.txt', np.transpose([time_array, thermistance1_temps, thermistance2_temps, thermistance3_temps]))
 
 print(f"Simulation terminée. Temps total simulé : {total_time}s, Nombre total d'itérations : {num_steps}, "
       f"Intervalle de sauvegarde : {save_interval}, Nombre de frames sauvegardées : {len(time_array)}")
