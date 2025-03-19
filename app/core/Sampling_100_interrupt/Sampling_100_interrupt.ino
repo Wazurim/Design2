@@ -44,19 +44,17 @@
 
 // Global variables for control and timing
 volatile uint32_t adcUpdateCount = 0;
+volatile uint8_t currentChannel = 0;
 volatile bool newSampleFlag = false;
 
 // ADC raw values for 4 channels (A0 to A3)
-volatile uint16_t adcRawValue0 = 0;
-volatile uint16_t adcRawValue1 = 0;
-volatile uint16_t adcRawValue2 = 0;
-volatile uint16_t adcRawValue3 = 0;
+volatile uint16_t adcRawValues[4]; // Store ADC results
 
 // Converted ADC voltage values (assuming a 5 V reference)
-volatile float sampledVoltageA0 = 0.0;
-volatile float sampledVoltageA1 = 0.0;
-volatile float sampledVoltageA2 = 0.0;
-volatile float sampledVoltageA3 = 0.0;
+//volatile float sampledVoltageA0 = 0.0;
+//volatile float sampledVoltageA1 = 0.0;
+//volatile float sampledVoltageA2 = 0.0;
+//volatile float sampledVoltageA3 = 0.0;
 
 // Control loop variables
 bool running = false;
@@ -66,8 +64,10 @@ float consigne = 25; // Setpoint voltage
 
 float Kp = 0.88;   // Start with a low value; adjust experimentally.
 float Ki = 1/101.72;   // Start with a low value; adjust experimentally.
-float previous = PWM_TOP/2;
-float integral = 0;
+// float previous = PWM_TOP/2;
+float previous_control = 0;
+float previous_error = 0;
+// float integral = 0;
 const float dt = 1/DESIRED_ADC_UPDATE_FREQ; // Assuming your ADC update is 1 Hz
 
 // Forward declarations for serial command handling
@@ -78,71 +78,42 @@ float voltage_to_temp(float volt);
 // Timer3 Compare Match A ISR
 // Fires at the rate defined by DESIRED_ADC_UPDATE_FREQ (e.g., 1 Hz)
 ISR(TIMER3_COMPA_vect) {
+
     adcUpdateCount++;
+    currentChannel = 0; // Reset channel index
+    ADMUX = (ADMUX & 0xF8) | currentChannel; // Select channel 0
+    ADCSRA |= (1 << ADSC); // Start ADC conversion
 
-    // Convert the raw ADC values (0–1023) to voltages (assuming 5 V reference)
-    sampledVoltageA0 = adcRawValue0 * (5.0 / 1023.0);
-    sampledVoltageA1 = adcRawValue1 * (5.0 / 1023.0);
-    sampledVoltageA2 = adcRawValue2 * (5.0 / 1023.0);
-    sampledVoltageA3 = adcRawValue3 * (5.0 / 1023.0);
-
-    newSampleFlag = true;
+    
 }
 
 //
 // ADC Conversion Complete ISR
 // The ADC is running in free-running mode and continuously updates the raw values.
 ISR(ADC_vect) {
-    _delay_us(10);
-    adcRawValue0 = ADC;
-    
-    // Switch to ADC1
-    ADMUX = (ADMUX & 0xF0) | 0x01;
-    _delay_us(10);
-    ADCSRA |= (1 << ADSC);  // Start ADC conversion on ADC1
-    while (ADCSRA & (1 << ADSC));
-    adcRawValue1 = ADC;
-    
-    // Switch to ADC2
-    ADMUX = (ADMUX & 0xF0) | 0x02;
-    _delay_us(10);
-    ADCSRA |= (1 << ADSC);
-    while (ADCSRA & (1 << ADSC));
-    adcRawValue2 = ADC;
-    
-    // Switch to ADC3
-    ADMUX = (ADMUX & 0xF0) | 0x03;
-    _delay_us(10);
-    ADCSRA |= (1 << ADSC);
-    while (ADCSRA & (1 << ADSC));
-    adcRawValue3 = ADC;
-    
-    // Switch back to ADC0 for the next cycle
-    ADMUX = (ADMUX & 0xF0) | 0x00;
-    ADCSRA |= (1 << ADSC);
+    adcRawValues[currentChannel] = ADC; // Read ADC result
+
+    if (currentChannel < 3) {
+        currentChannel++; // Move to the next channel
+        ADMUX = (ADMUX & 0xF8) | currentChannel; // Set next ADC channel
+        ADCSRA |= (1 << ADSC); // Start next conversion
+    } else {
+        newSampleFlag = true; // Flag that all conversions are complete
+    }
 }
 
 //
 // ADC Initialization: uses AVcc as reference and enables ADC interrupts.
 void ADC_Init() {
-    ADMUX = (1 << REFS0); // Use AVcc as reference
-    ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADPS2) | (1 << ADPS1);
+    ADMUX = (1 << REFS0);  // AVCC reference, start with channel 0
+    ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0); // Enable ADC, interrupt, prescaler = 128
     DIDR0 = 0x0F; // Disable digital input buffers on ADC0-ADC3
 }
 
 //
-// Setup function
-void setup() {
-    Serial.begin(115200);
-    ADC_Init();
-    ADCSRA |= (1 << ADSC);  // Start ADC conversions in free-running mode
-
-    // Set pin 11 as PWM output (OC1A)
-    pinMode(11, OUTPUT);
-
-    cli(); // Disable interrupts during timer configuration
-
-    // ---------- Timer1 Setup: 16-bit PWM on OC1A ----------
+// Timer1 setup (PWM)
+void setupTimer1(){
+   // ---------- Timer1 Setup: 16-bit PWM on OC1A ----------
     // Clear Timer1 registers
     TCCR1A = 0;
     TCCR1B = 0;
@@ -157,21 +128,40 @@ void setup() {
     // Set TOP for full 16-bit resolution
     ICR1 = PWM_TOP;
     // Set initial duty cycle to 50% (OCR1A = PWM_TOP/2)
-    OCR1A = PWM_TOP / 2;
-
+    OCR1A = PWM_TOP / 2; 
+}
+//
+// Timer3 setup (ADC)
+void setupTimer3(){
     // ---------- Timer3 Setup: ADC Update Interrupt ----------
     // Clear Timer3 registers
     TCCR3A = 0;
     TCCR3B = 0;
     // Configure Timer3 in CTC mode (Clear Timer on Compare Match, WGM32=1)
-    TCCR3B |= (1 << WGM32);
     // Set Timer3 prescaler to TIMER3_PRESCALER (e.g., 1024)
     // For Timer3 on Mega2560, prescaler=1024 is set by CS32 and CS30 bits
-    TCCR3B |= (1 << CS32) | (1 << CS30);
+    TCCR3B = (1 << WGM32) | (1 << CS32) | (1 << CS30); 
     // Set OCR3A for the desired ADC update frequency
-    OCR3A = OCR3A_VALUE;
+    OCR3A = OCR3A_VALUE; 
     // Enable Timer3 Compare Match A interrupt
-    TIMSK3 |= (1 << OCIE3A);
+    TIMSK3 |= (1 << OCIE3A);  
+}
+
+//
+// Setup function
+void setup() {
+    Serial.begin(115200);
+    ADC_Init();
+    ADCSRA |= (1 << ADSC);  // Start ADC conversions in free-running mode
+
+    // Set pin 11 as PWM output (OC1A)
+    pinMode(11, OUTPUT);
+
+    cli(); // Disable interrupts during timer configuration
+
+    setupTimer1();
+
+    setupTimer3();
 
     sei(); // Re-enable interrupts
 
@@ -195,10 +185,10 @@ void loop() {
     noInterrupts();
     bool sampleReady = newSampleFlag;
     // Copy the latest ADC voltage values to temporary variables
-    float currSamplet2 = sampledVoltageA0;
-    float currSamplet4 = sampledVoltageA1;
-    float currSamplet1 = sampledVoltageA2;
-    float currSamplet3 = sampledVoltageA3; // Used for control error computation
+    float currSamplet2 = adcRawValues[0] * (5.0 / 1023.0);
+    float currSamplet4 = adcRawValues[1] * (5.0 / 1023.0);
+    float currSamplet1 = adcRawValues[2] * (5.0 / 1023.0);
+    float currSamplet3 = adcRawValues[3] * (5.0 / 1023.0); // Used for control error computation
     uint32_t updateCountSnapshot = adcUpdateCount;
     
     // Calculate PWM period (in seconds):
@@ -226,31 +216,63 @@ void loop() {
         
         
         if (running) {
-            // Simple proportional control: adjust PWM duty cycle based on error between setpoint and measured ADC value.
+
+
             float error = consigne - voltage_to_tempt3(currSamplet3);
-            float baseDuty = PWM_TOP / 2;
-            //float control = ((0.8603f/(previous - 0.9805)) * (5-error) + 2.5)*PWM_TOP/5;
-            previous = error;
-            const float dt = 1/DESIRED_ADC_UPDATE_FREQ; 
-            integral += error - previous;
-            float control = -(error *Kp + integral *Ki) * PWM_TOP/10;
+            const float dt = 1.0f / DESIRED_ADC_UPDATE_FREQ;
 
-            //if (control > 25) {
-            //    control = 25;
-            //}
+            // Apply low-pass filter to reduce noise
+            //#define ALPHA 0.1
+            //error = ALPHA * error + (1 - ALPHA) * previous;
 
-            control +=  PWM_TOP/2;
+            // integral += error * dt; // Correct integral accumulation
 
-            if (control > PWM_TOP-750){
-                control = PWM_TOP-750;
-                //integral -= error;
-            } 
-            if (control < 750){
-                control = 750;
-                //integral -= error;
-            } 
+            // Compute PI control output
+            // float control = -(error * Kp + integral * Ki) * PWM_TOP / 10;
+            // control += PWM_TOP / 2; // Shift midpoint
+
+            // Si on trouve un nouveau PI, il faudra recalculer l'équation de récurrence
+            // et ensuite changer les valeurs ici. Les valeurs ne sont pas directement celles du PI.
+            // Vous pouvez regarder mes notes voir s'il n'y a pas une formule qui permet la conversion
+            // directe.
+            float control = -(previous_control + error * 0.525f - previous_error * 0.475f);
+            previous_control = -control;
+            // Adjust for operation point
+            control += 2.5f;
+
+            // Anti-windup
+            if (control > 4.9f) {
+                control = 4.9f;
+            }
+            else if (control < 0.1f) {
+                control = 0.1f;
+            }
+
+            // Set previous values before going into PWM.
+            
+            previous_error = error;
+
+            // Convert volts to PWM
+            control = (control/4.9f) * PWM_TOP;
+
+            // Implement anti-windup
+            // if (control > PWM_TOP - 750) {
+            //     control = PWM_TOP - 750;
+            //     // integral -= error * dt;
+            // } 
+            // if (control < 750) {
+            //     control = 750;
+            //     integral -= error * dt;  
+            // }
+
+            // Set PWM output
             uint16_t pwmValue = (uint16_t) control;
             OCR1A = pwmValue;
+
+            // Store error for next cycle
+            //previous = error;
+
+            //float control = ((0.8603f/(previous - 0.9805)) * (5-error) + 2.5)*PWM_TOP/5;           
             
             Serial.print(trueTime * 1000, 1);  // Time in ms
             Serial.print(" ms \t| PWM duty: ");
@@ -268,7 +290,7 @@ void loop() {
             Serial.print(" |\t\t error: ");
             Serial.print(error, 3);
             Serial.print(" | Integral: ");
-            Serial.println(integral, 3);
+            //Serial.println(integral, 3);
         }
         else {
             OCR1A = PWM_TOP / 2;
@@ -395,3 +417,4 @@ float voltage_to_tempt3(float volt) {
     float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
     return temp;
 }
+

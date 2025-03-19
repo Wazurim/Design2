@@ -27,7 +27,7 @@
 #define PWM_TOP 4095UL
 // Choose the Timer1 prescaler for PWM (available options: 1, 8, 64, 256, 1024)
 // For example, using 8 yields: PWM Frequency = 16e6 / (8 * 65536) ≈ 30.5 Hz
-#define PWM_PRESCALER 4UL
+#define PWM_PRESCALER 8UL
 
 // Macro to compute actual PWM frequency (for info only)
 #define ACTUAL_PWM_FREQ (F_CPU / (PWM_PRESCALER * (PWM_TOP + 1)))
@@ -186,7 +186,8 @@ void setup() {
     Serial.println("  p    -> start control loop");
     Serial.println("  S    -> stop control loop");
     Serial.println("  R    -> reset and new parameters");
-    Serial.println("  PARAM C=2.5 F=1.0  -> set parameters (C = setpoint, F = frequency)");
+    Serial.println("  PARAM C=2.5 I=1.0 K=0.5  -> set parameters (C = setpoint, I = Ki, K = Kp)");
+
 }
 
 //
