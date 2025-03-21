@@ -68,6 +68,11 @@ class SerialMonitor(QWidget):
         self.read_thread = SerialReadThread(self.ser, self.on_line_received)
         self.read_thread.start()
 
+        # Recording flag & file handle
+        self.recording = False
+        self.file = None
+
+
         # ----- 3) Build the UI layout -----
         layout = QVBoxLayout()
 
@@ -76,14 +81,20 @@ class SerialMonitor(QWidget):
         self.btn_play = QPushButton("Play")
         self.btn_stop = QPushButton("Stop")
         self.btn_reset = QPushButton("Reset")
+        self.btn_record = QPushButton("Record")
+
         btn_layout.addWidget(self.btn_play)
         btn_layout.addWidget(self.btn_stop)
         btn_layout.addWidget(self.btn_reset)
+        btn_layout.addWidget(self.btn_record)
+
         layout.addLayout(btn_layout)
 
         self.btn_play.clicked.connect(self.send_play)
         self.btn_stop.clicked.connect(self.send_stop)
         self.btn_reset.clicked.connect(self.send_reset)
+        self.btn_record.clicked.connect(self.toggle_recording)
+
 
         # 3.2) Param row (Amplitude, Frequency) + "Send Param" button
         param_layout = QHBoxLayout()
@@ -123,6 +134,9 @@ class SerialMonitor(QWidget):
     ########################################
     def on_line_received(self, line):
         self.lineReceived.emit(f"[RX] {line}")
+        if self.recording and self.file:
+            self.file.write(line + "\n")
+            self.file.flush()
 
     ########################################
     # Slot to update the text area (runs in main thread)
@@ -160,6 +174,20 @@ class SerialMonitor(QWidget):
             self.text_area.appendPlainText(f"[TX] {data_str}")
 
     ########################################
+    # Toggle Recording
+    ########################################
+    def toggle_recording(self):
+        if not self.recording:
+            self.text_area.appendPlainText("Enregistrement des données lancée")
+            self.file = open("identification.txt", "w")
+            self.recording = True
+        else:
+            self.text_area.appendPlainText("Enregistrement des données fini -> identification")
+            if self.file:
+                self.file.close()
+            self.recording = False
+
+    ########################################
     # Cleanup on close
     ########################################
     def closeEvent(self, event):
@@ -168,6 +196,8 @@ class SerialMonitor(QWidget):
             self.read_thread.join()
         if self.ser and self.ser.is_open:
             self.ser.close()
+        if self.file:
+            self.file.close()
         event.accept()
 
 

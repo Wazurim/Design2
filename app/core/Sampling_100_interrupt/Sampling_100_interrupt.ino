@@ -50,11 +50,6 @@ volatile bool newSampleFlag = false;
 // ADC raw values for 4 channels (A0 to A3)
 volatile uint16_t adcRawValues[4]; // Store ADC results
 
-// Converted ADC voltage values (assuming a 5 V reference)
-//volatile float sampledVoltageA0 = 0.0;
-//volatile float sampledVoltageA1 = 0.0;
-//volatile float sampledVoltageA2 = 0.0;
-//volatile float sampledVoltageA3 = 0.0;
 
 // Control loop variables
 bool running = false;
