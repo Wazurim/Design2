@@ -15,7 +15,7 @@ class AppController:
         self.__find_conf()
 
         self.app = QApplication(sys.argv)
-        self.serial_window = SerialMonitor(port="COM3", baudrate=115200)
+        self.serial_window = SerialMonitor(port="COM9", baudrate=115200)
         screen = self.app.primaryScreen()
         available_rect = screen.availableGeometry()
 

@@ -250,7 +250,9 @@ void loop() {
             previous_error = error;
 
             // Convert volts to PWM
-            control = ((control-0.1f)/4.8f) * PWM_TOP;
+            // control = ((control-0.1f)/4.8f) * PWM_TOP;
+            control = (control-0.1f)/4.8f;
+            control = control * (1720) + 1200;
 
             // Implement anti-windup
             // if (control > PWM_TOP - 750) {
@@ -285,8 +287,8 @@ void loop() {
             Serial.print(" | ADC t4: ");
             Serial.print(voltage_to_tempt3(currSamplet4), 3);
             Serial.print(" |\t\t error: ");
-            Serial.print(error, 3);
-            Serial.print(" | Integral: ");
+            Serial.println(error, 3);
+            // Serial.print(" | Integral: ");
             //Serial.println(integral, 3);
         }
         else {
