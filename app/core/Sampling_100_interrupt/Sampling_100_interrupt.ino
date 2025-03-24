@@ -212,9 +212,10 @@ void loop() {
         
         if (running) {
 
-            float volt_consigne = consigne/2.0833f - 9.5f;
+            //float volt_consigne = consigne/2.91666f - 6.071428f;
 
-            float error = -(volt_consigne - (5 - currSamplet3));
+            //float error = -(volt_consigne - (5 - currSamplet3));
+            float error = consigne - voltage_to_tempt3(currSamplet3);
             const float dt = 1.0f / DESIRED_ADC_UPDATE_FREQ;
 
             // Apply low-pass filter to reduce noise
@@ -231,7 +232,7 @@ void loop() {
             // et ensuite changer les valeurs ici. Les valeurs ne sont pas directement celles du PI.
             // Vous pouvez regarder mes notes voir s'il n'y a pas une formule qui permet la conversion
             // directe.
-            float control = (previous_control + error * 0.525f - previous_error * 0.475f);
+            float control = (previous_control - error * 0.525f + previous_error * 0.475f);
             // float control = 0;
             previous_control = control;
             // Adjust for operation point
@@ -251,6 +252,7 @@ void loop() {
 
             // Convert volts to PWM
             control = ((control-0.1f)/4.8f) * PWM_TOP;
+            
             // control = (control-0.1f)/4.8f;
             // control = control * (1720) + 1200;
 
@@ -286,13 +288,15 @@ void loop() {
             Serial.print(voltage_to_tempt3(currSamplet3), 3);
             Serial.print(" | ADC t4: ");
             Serial.print(voltage_to_tempt3(currSamplet4), 3);
-            Serial.print(" |\t\t error: ");
+            Serial.print(" | ADC t3 RAW: ");
+            Serial.print(currSamplet3, 3);
+            Serial.print(" |\t error: ");
             Serial.println(error, 3);
             // Serial.print(" | Integral: ");
             //Serial.println(integral, 3);
         }
         else {
-            OCR1A = PWM_TOP / 2;
+            OCR1A = PWM_TOP/2;
             Serial.print(trueTime * 1000, 1);
             Serial.print(" ms \t| PWM duty: ");
             Serial.print(PWM_TOP / 2);
