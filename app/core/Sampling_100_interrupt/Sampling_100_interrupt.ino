@@ -215,7 +215,7 @@ void loop() {
             //float volt_consigne = consigne/2.91666f - 6.071428f;
 
             //float error = -(volt_consigne - (5 - currSamplet3));
-            float error = consigne - voltage_to_tempt3(currSamplet3);
+            float error = (consigne - voltage_to_tempt3(currSamplet3));
             const float dt = 1.0f / DESIRED_ADC_UPDATE_FREQ;
 
             // Apply low-pass filter to reduce noise
@@ -232,8 +232,14 @@ void loop() {
             // et ensuite changer les valeurs ici. Les valeurs ne sont pas directement celles du PI.
             // Vous pouvez regarder mes notes voir s'il n'y a pas une formule qui permet la conversion
             // directe.
-            float control = (previous_control - error * 0.525f + previous_error * 0.475f);
+            float control = (previous_control + error * 0.5025f - previous_error * 0.4975f);
             // float control = 0;
+            if (control > 2.5f) {
+                control = 2.5f;
+            }
+            else if (control < -2.5f) {
+                control = -2.5f;
+            }
             previous_control = control;
             // Adjust for operation point
             control += 2.5f;
@@ -245,6 +251,8 @@ void loop() {
             else if (control < 0.1f) {
                 control = 0.1f;
             }
+
+            control = 5 - control;
 
             // Set previous values before going into PWM.
             
