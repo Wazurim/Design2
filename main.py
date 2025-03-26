@@ -1,13 +1,10 @@
 import sys
-from PyQt5.QtWidgets import QApplication
 from app.core.app_controller import AppController
 
 def main():
-    app = QApplication(sys.argv)
     ac = AppController()
-    #ac.show_main_window()
-    ac.show_serial_monitor()
-    sys.exit(app.exec_())
+    ac.show_main_window()
+    sys.exit(ac.app.exec_())
 
 if __name__ == "__main__":
-    main() 
+    main()
