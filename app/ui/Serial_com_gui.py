@@ -1,7 +1,12 @@
 import sys
+import re
 import time
 import serial
 import threading
+import os
+from datetime import datetime
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from PyQt5.QtGui import QIcon
 
@@ -49,10 +54,16 @@ class SerialMonitor(QWidget):
     # Signal for safe UI updates from the serial thread.
     lineReceived = pyqtSignal(str)
 
-    def __init__(self, port="COM3", baudrate=115200, parent=None):
+    def __init__(self, port="COM6", baudrate=115200, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Design 2 Prototype serial monitor")
         self.setWindowIcon(QIcon("icon.png"))
+
+        # Ensure the data directory exists
+        self.data_dir = os.path.join(os.getcwd(), "data")
+        os.makedirs(self.data_dir, exist_ok=True)
+        self.recording = False
+        self.file = None
 
 
         # ----- 1) Open the serial port -----
@@ -74,7 +85,11 @@ class SerialMonitor(QWidget):
 
 
         # ----- 3) Build the UI layout -----
-        layout = QVBoxLayout()
+         # UI Layouts
+        main_layout = QHBoxLayout()  # Horizontal layout to split log & plot
+        control_layout = QVBoxLayout()  # Controls on the left
+        plot_layout = QVBoxLayout()  # Plot on the right
+        #layout = QVBoxLayout()
 
         # 3.1) Buttons row: Play, Stop, Reset
         btn_layout = QHBoxLayout()
@@ -88,7 +103,7 @@ class SerialMonitor(QWidget):
         btn_layout.addWidget(self.btn_reset)
         btn_layout.addWidget(self.btn_record)
 
-        layout.addLayout(btn_layout)
+        #layout.addLayout(btn_layout)
 
         self.btn_play.clicked.connect(self.send_play)
         self.btn_stop.clicked.connect(self.send_stop)
@@ -109,7 +124,7 @@ class SerialMonitor(QWidget):
         param_layout.addWidget(self.input_Kp)
         self.btn_param = QPushButton("Send Param")
         param_layout.addWidget(self.btn_param)
-        layout.addLayout(param_layout)
+        control_layout.addLayout(param_layout)
         self.btn_param.clicked.connect(self.send_param)
 
         # 3.3) A text field to send a raw command
@@ -119,15 +134,33 @@ class SerialMonitor(QWidget):
         raw_cmd_layout.addWidget(self.input_raw_cmd)
         self.btn_send_raw = QPushButton("Send")
         raw_cmd_layout.addWidget(self.btn_send_raw)
-        layout.addLayout(raw_cmd_layout)
+        control_layout.addLayout(raw_cmd_layout)
         self.btn_send_raw.clicked.connect(self.send_raw_cmd)
 
         # 3.4) Use QPlainTextEdit for the received data log (more efficient for plain text)
         self.text_area = QPlainTextEdit()
         self.text_area.setReadOnly(True)
-        layout.addWidget(self.text_area)
 
-        self.setLayout(layout)
+
+         # Add widgets to layouts
+        control_layout.addLayout(btn_layout)
+        control_layout.addLayout(param_layout)
+        control_layout.addLayout(raw_cmd_layout)
+        control_layout.addWidget(self.text_area)
+        control_layout.addWidget(self.text_area)
+
+        # Create live plot widget
+        self.plot_widget = LivePlotWidget()
+        plot_layout.addWidget(self.plot_widget)
+
+
+        # Add layouts to the main layout
+        main_layout.addLayout(control_layout, 2)  # Control panel (left side)
+        main_layout.addLayout(plot_layout, 3)  # Real-time plot (right side)
+
+
+
+        self.setLayout(main_layout)
 
     ########################################
     # Worker thread callback
@@ -177,15 +210,17 @@ class SerialMonitor(QWidget):
     # Toggle Recording
     ########################################
     def toggle_recording(self):
-        if not self.recording:
-            self.text_area.appendPlainText("Enregistrement des données lancée")
-            self.file = open("identification.txt", "w")
-            self.recording = True
-        else:
-            self.text_area.appendPlainText("Enregistrement des données fini -> identification")
+        if self.recording:
+            self.recording = False
             if self.file:
                 self.file.close()
-            self.recording = False
+            self.text_area.appendPlainText("Enregistrement des données fini -> identification")
+        else:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = os.path.join(self.data_dir, f"identification_{timestamp}.txt")
+            self.file = open(filename, "w")
+            self.recording = True
+            self.text_area.appendPlainText("Enregistrement des données lancé")
 
     ########################################
     # Cleanup on close
@@ -200,10 +235,9 @@ class SerialMonitor(QWidget):
             self.file.close()
         event.accept()
 
-
 def main():
     app = QApplication(sys.argv)
-    window = SerialMonitor(port="COM3", baudrate=115200)
+    window = SerialMonitor(port="COM6", baudrate=115200)
 
     
     # Get the primary screen's available geometry
@@ -218,8 +252,81 @@ def main():
     y = available_rect.y() + (available_rect.height() - height) // 2
     window.setGeometry(x, y, width, height)
     
+
+
+
     window.show()
     sys.exit(app.exec_())
+
+
+class LivePlotWidget(QWidget):
+    """A QWidget that displays a real-time updating Matplotlib plot."""
+    
+    def __init__(self):
+        super().__init__()
+        self.time_values = []
+        self.adc_t3_values = []
+
+        # Set up Matplotlib figure
+        self.figure, self.ax = plt.subplots(figsize=(5, 4))
+        self.canvas = FigureCanvas(self.figure)
+        self.line, = self.ax.plot([], [], "bo-", label="ADC t3")
+
+        self.ax.set_xlabel("Time (µs)")
+        self.ax.set_ylabel("ADC t3 Value")
+        self.ax.set_title("Real-Time ADC t3 Readings")
+        self.ax.legend()
+        self.ax.grid()
+
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+        self.setLayout(layout)
+
+    def get_latest_file(self):
+        """Finds the most recently created/modified identification file."""
+        files = [f for f in os.listdir(self.data_dir) if f.startswith("identification_") and f.endswith(".txt")]
+        if not files:
+            return None
+        latest_file = max(files, key=lambda f: os.path.getmtime(os.path.join(self.data_dir, f)))
+        return os.path.join(self.data_dir, latest_file)
+
+    def update_plot(self):
+        """Reads the latest file in real-time and updates the plot dynamically."""
+        latest_file = self.get_latest_file()
+        if not latest_file:
+            print("No recorded data files found.")
+            return
+
+        print(f"Monitoring file: {latest_file}")
+        pattern = re.compile(r"(\d+\.\d+) ms\s+\|.*?ADC t3:\s+([-?\d\.]+)")
+
+        with open(latest_file, "r") as file:
+            file.seek(0, os.SEEK_END)  # Move to the end of the file
+
+            while True:
+                line_data = file.readline()
+                if not line_data:
+                    time.sleep(1)  # Wait for new data
+                    continue
+
+                match = pattern.search(line_data)
+                if match:
+                    self.time_values.append(float(match.group(1)) * 1000)  # Convert ms to µs
+                    self.adc_t3_values.append(float(match.group(2)))
+
+                    # Update plot
+                    self.line.set_xdata(self.time_values)
+                    self.line.set_ydata(self.adc_t3_values)
+                    self.ax.relim()
+                    self.ax.autoscale_view()
+
+                    self.canvas.draw()  # Update the PyQt plot
+
+                # Stop if recording is done (file closed externally)
+                if not os.path.exists(latest_file):
+                    print("File closed, stopping live plot.")
+                    break
 
 
 if __name__ == "__main__":
