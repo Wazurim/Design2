@@ -1,17 +1,23 @@
 {
     "plate": {
-        "time": "1000",
-        "lenght": "12",
-        "depth": "12",
-        "tickness": "12",
-        "nx": "12",
-        "ny": "12",
-        "k": "12",
-        "rho": "",
-        "cp": "",
-        "h": "",
-        "power_in": "",
-        "ambient_temp": "",
-        "initial_temp": "12"
+        "Total Time [s]:": "500",
+        "Length Y [m]:": "116.44e-3",
+        "Length X [m]:": "61.68e-3",
+        "Thickness [m]:": "1.82e-3",
+        "N:": "117",
+        "Thermal Conductivity [W/mK]:": "350",
+        "Density [kg/m3]:": "2333",
+        "Heat Capacity [J/kgK]:": "896",
+        "Convection Coeff [W/m2K]:": "13.5",
+        "Amperage Input [A]:": "-0.824",
+        "Power transfert :": "-1.3",
+        "Ambient Temp [\u00b0C]:": "23.8",
+        "Initial Temp [\u00b0C]:": "0",
+        "Position heat source [(X, Y)]:": "(16, 31)",
+        "Position thermistance 1 [(X, Y)]:": "(16, 31)",
+        "Position thermistance 2 [(X, Y)]:": "(61, 31)",
+        "Position thermistance 3 [(X, Y)]:": "(106, 31)",
+        "Start heat time [s]:": "10",
+        "Stop heat time [s]:": "1027"
     }
 }
