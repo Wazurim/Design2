@@ -4,7 +4,7 @@ import os, sys, ast
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QApplication
 from PyQt5.QtCore import QTimer
 
-from app.ui.Main_window import MainWindow
+from app.ui.main_window import MainWindow
 from app.core.JSON_Handler import JsonHandler
 from app.core.plate_transmission import Plate
 from app.ui.plate_canvas import PlateCanvas
@@ -77,11 +77,8 @@ class AppController:
 
     def load_params(self, filename=None):
         try:
-            if filename is None:
+            if filename is None or type(filename) != str:
                 filename = self.main_window.cb_import.currentText()
-
-            if not isinstance(filename, str):
-                filename = str(filename)
 
             if not filename.endswith(".json"):
                 print(f"[WARN] Ignoring invalid file: {filename}")
