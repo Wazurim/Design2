@@ -1,121 +1,129 @@
-import os, sys
+# app/core/app_controller.py
+
+import os, sys, ast
+from PyQt5.QtWidgets import QFileDialog, QMessageBox, QApplication
+from PyQt5.QtCore import QTimer
+
 from app.ui.main_window import MainWindow
 from app.core.JSON_Handler import JsonHandler
-from PyQt5.QtWidgets import QFileDialog, QMessageBox, QApplication
-from app.core.graph_plate_transmission_copy import Simulateur
-from app.ui.Serial_com_gui import SerialMonitor
+from app.core.plate_transmission import Plate
+from app.ui.plate_canvas import PlateCanvas
+
 
 class AppController:
     def __init__(self):
-        self.data = {}
+        self.app = QApplication(sys.argv)
         self.main_window = MainWindow(self)
         self.json_handler = JsonHandler()
-        self.cwd = os.getcwd()
         self.config_dir = "app/Configs"
-        self.__find_conf()
-
-        self.app = QApplication(sys.argv)
-        self.serial_window = SerialMonitor(port="COM9", baudrate=115200)
+        self.canvas = None
+        self.cwd = os.getcwd()
         screen = self.app.primaryScreen()
         available_rect = screen.availableGeometry()
 
-        width = int(available_rect.width() * 0.8)
-        height = int(available_rect.height() * 0.8)
-        x = available_rect.x() + (available_rect.width() - width) // 2
-        y = available_rect.y() + (available_rect.height() - height) // 2
-        self.main_window.setGeometry(x, y, width, height)
-        self.serial_window.setGeometry(x, y, width, height)
+        self.screen_width = int(available_rect.width() * 0.9)
+        self.screen_height = int(available_rect.height() * 0.9)
+        self.screen_x = available_rect.x() + (available_rect.width() - self.screen_width) // 2
+        self.screen_y = available_rect.y() + (available_rect.height() - self.screen_height) // 2
+        self.__load_config_list()
 
 
-
-
-
-    def __find_conf(self):
-        relative_path = "app/Configs"
-        
-        absolute_path = os.path.join(self.cwd,relative_path)
-
-        if os.path.exists(absolute_path) and os.path.isdir(absolute_path):
-            json_files = [f for f in os.listdir(absolute_path) if f.endswith(".json")]
-            self.main_window.cb_import.addItems(json_files)
-            if "latest.json" in json_files:
-                self.main_window.cb_import.setCurrentIndex(json_files.index("latest.json"))
-                self.__load_params("latest.json")
-        else:
-            print("Config file not found or error while reading config files")
-
-    def __Config_autosave(self):
-        data = self.__fetch_params()
-        self.json_handler.write_json_file("app/Configs/latest.json", data)
-
-    def __fetch_params(self):
-        param = {"plate":{"time" : str(self.main_window.zone_total_time.toPlainText()),
-                            "lenght" : str(self.main_window.zone_lenght.toPlainText()),
-                            "depth" : str(self.main_window.zone_Depth.toPlainText()),
-                            "thickness" : str(self.main_window.zone_thick.toPlainText()),
-                            "nx" : str(self.main_window.zone_nx.toPlainText()),
-                            "ny" : str(self.main_window.zone_ny.toPlainText()),
-                            "k" : str(self.main_window.zone_k.toPlainText()),
-                            "rho" : str(self.main_window.zone_rho.toPlainText()),
-                            "cp" : str(self.main_window.zone_cp.toPlainText()),
-                            "h" : str(self.main_window.zone_h.toPlainText()),
-                            "power_in" : str(self.main_window.zone_power_in.toPlainText()),
-                            "ambient_temp" : str(self.main_window.zone_ambient_temp.toPlainText()),
-                            "initial_temp" : str(self.main_window.zone_initial_temp.toPlainText())}}
-        return param
-
-    def __load_params(self, file):
-        file_path = os.path.join(self.config_dir, file)
-        if self.json_handler.read_json_file(file_path):
-            param = self.json_handler.get_data()
-            self.main_window.zone_total_time.setPlainText(str(param.get("plate").get("time")))
-            self.main_window.zone_lenght.setPlainText(str(param.get("plate").get("lenght")))
-            self.main_window.zone_Depth.setPlainText(str(param.get("plate").get("depth")))
-            self.main_window.zone_thick.setPlainText(str(param.get("plate").get("thickness")))
-            self.main_window.zone_nx.setPlainText(str(param.get("plate").get("nx")))
-            self.main_window.zone_ny.setPlainText(str(param.get("plate").get("ny")))
-            self.main_window.zone_k.setPlainText(str(param.get("plate").get("k")))
-            self.main_window.zone_rho.setPlainText(str(param.get("plate").get("rho")))
-            self.main_window.zone_cp.setPlainText(str(param.get("plate").get("cp")))
-            self.main_window.zone_h.setPlainText(str(param.get("plate").get("h")))
-            self.main_window.zone_power_in.setPlainText(str(param.get("plate").get("power_in")))
-            self.main_window.zone_ambient_temp.setPlainText(str(param.get("plate").get("ambient_temp")))
-            self.main_window.zone_initial_temp.setPlainText(str(param.get("plate").get("initial_temp")))
-
-#### Public FCT
-
-    def close_window(self):
-        self.main_window.close()
-        self.__Config_autosave()
-
-    def minimize_window(self):
-        self.main_window.showMinimized()
+    def __load_config_list(self):
+        if not os.path.exists(self.config_dir):
+            print("No config directory found")
+            return
+        files = [f for f in os.listdir(self.config_dir) if f.endswith(".json")]
+        self.main_window.cb_import.addItems(files)
+        if "latest.json" in files:
+            self.main_window.cb_import.setCurrentText("latest.json")
+            self.load_params("latest.json")
 
     def show_main_window(self):
+        self.main_window.setGeometry(self.screen_x, self.screen_y, self.screen_width, self.screen_height)
         self.main_window.show()
 
     def show_serial_monitor(self):
-        self.serial_window.show()
-
-
-
-
-    def load_params(self):
-        self.__load_params(self.main_window.cb_import.currentText())
+        self.main_window.show()
 
     def autosave(self):
-        self.__Config_autosave()
+        params = self.__fetch_params()
+        self.json_handler.write_json_file(os.path.join(self.config_dir, "latest.json"), params)
+
+    def __fetch_params(self):
+        ui = self.main_window
+        return {
+            "plate": {
+                "Total Time [s]:": ui.zone_total_time.toPlainText(),
+                "Length Y [mm]:": ui.zone_length.toPlainText(),
+                "Length X [mm]:": ui.zone_Depth.toPlainText(),
+                "Thickness [mm]:": ui.zone_thick.toPlainText(),
+                "N:": ui.zone_n.toPlainText(),
+                "Thermal Conductivity [W/mK]:": ui.zone_k.toPlainText(),
+                "Density [kg/m3]:": ui.zone_rho.toPlainText(),
+                "Heat Capacity [J/kgK]:": ui.zone_cp.toPlainText(),
+                "Convection Coeff [W/m2K]:": ui.zone_h.toPlainText(),
+                "Amperage Input [A]:": ui.zone_amp_in.toPlainText(),
+                "Power transfert :": ui.zone_power_transfert.toPlainText(),
+                "Ambient Temp [°C]:": ui.zone_ambient_temp.toPlainText(),
+                "Initial Temp [°C]:": ui.zone_initial_temp.toPlainText(),
+                "Position heat source [(X, Y)]:": ui.zone_position_heat_source.toPlainText(),
+                "Position thermistance 1 [(X, Y)]:": ui.zone_positions_thermistance_1.toPlainText(),
+                "Position thermistance 2 [(X, Y)]:": ui.zone_positions_thermistance_2.toPlainText(),
+                "Position thermistance 3 [(X, Y)]:": ui.zone_positions_thermistance_3.toPlainText(),
+                "Start heat time [s]:": ui.zone_start_heat_time.toPlainText(),
+                "Stop heat time [s]:": ui.zone_stop_heat_time.toPlainText()
+            }
+        }
+
+    def load_params(self, filename=None):
+        try:
+            if filename is None or type(filename) != str:
+                filename = self.main_window.cb_import.currentText()
+
+            if not filename.endswith(".json"):
+                print(f"[WARN] Ignoring invalid file: {filename}")
+                return
+
+            file_path = os.path.join(self.config_dir, filename)
+            if not os.path.exists(file_path):
+                print(f"[ERROR] File not found: {file_path}")
+                return
+
+            if self.json_handler.read_json_file(file_path):
+                p = self.json_handler.get_data().get("plate", {})
+                ui = self.main_window
+                ui.zone_total_time.setPlainText(str(p.get("Total Time [s]:", "")))
+                ui.zone_length.setPlainText(str(p.get("Length Y [mm]:", "")))
+                ui.zone_Depth.setPlainText(str(p.get("Length X [mm]:", "")))
+                ui.zone_thick.setPlainText(str(p.get("Thickness [mm]:", "")))
+                ui.zone_n.setPlainText(str(p.get("N:", "")))
+                ui.zone_k.setPlainText(str(p.get("Thermal Conductivity [W/mK]:", "")))
+                ui.zone_rho.setPlainText(str(p.get("Density [kg/m3]:", "")))
+                ui.zone_cp.setPlainText(str(p.get("Heat Capacity [J/kgK]:", "")))
+                ui.zone_h.setPlainText(str(p.get("Convection Coeff [W/m2K]:", "")))
+                ui.zone_amp_in.setPlainText(str(p.get("Amperage Input [A]:", "")))
+                ui.zone_power_transfert.setPlainText(str(p.get("Power transfert :", "")))
+                ui.zone_ambient_temp.setPlainText(str(p.get("Ambient Temp [°C]:", "")))
+                ui.zone_initial_temp.setPlainText(str(p.get("Initial Temp [°C]:", "")))
+                ui.zone_position_heat_source.setPlainText(str(p.get("Position heat source [(X, Y)]:", "")))
+                ui.zone_positions_thermistance_1.setPlainText(str(p.get("Position thermistance 1 [(X, Y)]:", "")))
+                ui.zone_positions_thermistance_2.setPlainText(str(p.get("Position thermistance 2 [(X, Y)]:", "")))
+                ui.zone_positions_thermistance_3.setPlainText(str(p.get("Position thermistance 3 [(X, Y)]:", "")))
+                ui.zone_start_heat_time.setPlainText(str(p.get("Start heat time [s]:", "")))
+                ui.zone_stop_heat_time.setPlainText(str(p.get("Stop heat time [s]:", "")))
+
+        except Exception as e:
+            print(f"[CRITICAL] Failed to load params: {e}")
 
     def export_params(self):
         default = os.path.join(self.cwd, self.config_dir)
         file_path, _ = QFileDialog.getSaveFileName(
-        None,  # Parent window (None means the dialog is standalone)
-        "Save JSON File",  # Dialog title
-        default,  # Default directory (empty means it opens in the last used directory)
-        "JSON Files (*.json);;All Files (*)"  # File filter
+        None, 
+        "Save JSON File",  
+        default, 
+        "JSON Files (*.json);;All Files (*)"  
         )
 
-        # Check if the user selected a file or canceled
         if not file_path:
             QMessageBox.warning(None, "Export Cancelled", "No file selected for export.")
             return False
@@ -129,40 +137,38 @@ class AppController:
             return False
 
     def start_simulation(self):
-        params = self.__fetch_params()
         try:
-            time = int(params.get("plate").get("time"))
-            lenght = int(params.get("plate").get("lenght"))
-            depth = int(params.get("plate").get("depth"))
-            thickness = float(params.get("plate").get("thickness"))
-            nx = int(params.get("plate").get("nx"))
-            ny = int(params.get("plate").get("ny"))
-            k = float(params.get("plate").get("k"))
-            rho = float(params.get("plate").get("rho"))
-            cp = float(params.get("plate").get("cp"))
-            h = float(params.get("plate").get("h"))
-            power_in = float(params.get("plate").get("power_in"))
-            ambient_temp = float(params.get("plate").get("ambient_temp"))
-            initial_temp = float(params.get("plate").get("initial_temp"))
-        except ValueError as err:
-            print(err)
-        except Exception as err:
-            print(err)
-            sys.exit(-1)
+            p = self.__fetch_params()["plate"]
+            plate = Plate(
+                total_time=float(p["Total Time [s]:"]),
+                lx=float(p["Length Y [mm]:"])/1000,
+                ly=float(p["Length X [mm]:"])/1000,
+                thickness=float(p["Thickness [mm]:"])/1000,
+                n=int(p["N:"]),
+                k=float(p["Thermal Conductivity [W/mK]:"]),
+                rho=float(p["Density [kg/m3]:"]),
+                cp=float(p["Heat Capacity [J/kgK]:"]),
+                h_convection=float(p["Convection Coeff [W/m2K]:"]),
+                amp_in=float(p["Amperage Input [A]:"]),
+                power_transfer=float(p["Power transfert :"]),
+                ambient_temp=float(p["Ambient Temp [°C]:"]),
+                initial_plate_temp=float(p["Initial Temp [°C]:"]),
+                position_heat_source=ast.literal_eval(p["Position heat source [(X, Y)]:"]),
+                positions_thermistances=[ast.literal_eval(s) for s in ( p["Position thermistance 1 [(X, Y)]:"], p["Position thermistance 2 [(X, Y)]:"], p["Position thermistance 3 [(X, Y)]:"])],
+                start_heat_time=float(p["Start heat time [s]:"]),
+                stop_heat_time=float(p["Stop heat time [s]:"])
+            )
 
-        try:
-            if (time != None) and (lenght != None) and (depth != None) and (thickness != None) and (nx != None) and (ny != None) and (k != None) and (rho != None) and (cp != None) and (h != None) and (power_in != None) and (ambient_temp != None) and (initial_temp != None):
-                if (type(time) == int) and (type(lenght) == int) and (type(depth) == int) and (type(thickness) == float) and (type(nx) == int) and (type(ny) == int) and (type(k) == float) and (type(rho) == float) and (type(cp) == float) and (type(h) == float) and (type(power_in) == float) and (type(ambient_temp) == float) and (type(initial_temp) == float):
-
-                    sim = Simulateur(time, lenght, depth, thickness, nx, ny, k, rho,
-                        cp, h, power_in, ambient_temp, initial_temp)
-        except UnboundLocalError as err:
-            print(err)
-            print("Value must not correspond to correct type or is empty")
-        except Exception as err:
-            print(err)
-            sys.exit(-1)
- 
+            if self.canvas:
+                self.main_window.layout().removeWidget(self.canvas)
+                self.canvas.setParent(None)
+            self.main_window.set_secondary_layout()
 
 
+            self.canvas = PlateCanvas()
+            self.main_window.layout().addWidget(self.canvas)
+            self.canvas.start_simulation(plate)
+            print()
 
+        except Exception as e:
+            QMessageBox.critical(None, "Error", f"Failed to start simulation:\n{e}")
