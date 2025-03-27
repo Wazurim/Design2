@@ -2,7 +2,7 @@ import re
 import matplotlib.pyplot as plt
 
 # File path
-file_path = "WorkingTest.txt"
+file_path = "test_asserv.txt"
 
 # Lists to store extracted values
 time_values = []
@@ -16,7 +16,7 @@ with open(file_path, "r") as file:
     for line in file:
         match = pattern.search(line)
         if match:
-            time_values.append(float(match.group(1)))  # Convert to microseconds
+            time_values.append(float(match.group(1)))  
             adc_t3_values.append(float(match.group(2)))
 
 

@@ -1,0 +1,2 @@
+70000.0 ms 	| PWM duty: 2047 / 4095 | ADC t1: 24.137 | ADC t2: 24.108 | ADC t3: 22.918 | ADC t4: 22.880	 Control OFF
+71000.0 ms 	| PWM duty: 2047 / 4095 | ADC t1: 24.137 | ADC t2: 24.108 | ADC t3: 22.918 | ADC t4: 22.867	 Control OFF
