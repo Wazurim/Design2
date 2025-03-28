@@ -62,7 +62,7 @@ float Ki = 1/101.72;   // Start with a low value; adjust experimentally.
 // float previous = PWM_TOP/2;
 float previous_control = 25;
 float previous_error = 0;
-float previous_t2s[] = [25, 25, 25];
+float previous_t2s[] = {25, 25, 25};
 float previous_estimated_t3 = 25;
 // float integral = 0;
 const float dt = 1/DESIRED_ADC_UPDATE_FREQ; // Assuming your ADC update is 1 Hz
@@ -217,8 +217,7 @@ void loop() {
             //float volt_consigne = consigne/2.91666f - 6.071428f;
 
             //float error = -(volt_consigne - (5 - currSamplet3));
-            float estimated_tempt3 = (0.88 * previous_t2s[2] + 59 * previous_estimated_t3)/61;
-            
+            float estimated_tempt3 = (0.027 * (previous_t2s[2]-25) + 0.9672 * (previous_estimated_t3-25))+25;
             previous_estimated_t3 = estimated_tempt3;
             previous_t2s[2] = previous_t2s[1];
             previous_t2s[1] = previous_t2s[0];
@@ -293,8 +292,8 @@ void loop() {
 
             //float control = ((0.8603f/(previous - 0.9805)) * (5-error) + 2.5)*PWM_TOP/5;           
             
-            Serial.print(trueTime * 1000, 1);  // Time in ms
-            Serial.print(" ms \t| PWM duty: ");
+            Serial.print(trueTime * 1, 1);  // Time in ms
+            Serial.print(" s \t| PWM duty: ");
             Serial.print(pwmValue);
             Serial.print(" / ");
             Serial.print(PWM_TOP);
@@ -304,10 +303,10 @@ void loop() {
             Serial.print(voltage_to_tempt1(currSamplet2), 3);
             Serial.print(" | ADC t3: ");
             Serial.print(voltage_to_tempt3(currSamplet3), 3);
-            Serial.print(" | ADC t4: ");
-            Serial.print(voltage_to_tempt3(currSamplet4), 3);
-            Serial.print(" | ADC t3 RAW: ");
-            Serial.print(currSamplet3, 3);
+            Serial.print(" | ADC t3 estimate: ");
+            Serial.print(estimated_tempt3, 3);
+            //Serial.print(" | ADC t4: ");
+            //Serial.print(voltage_to_tempt3(currSamplet4), 3);
             Serial.print(" |\t error: ");
             Serial.println(error, 3);
             // Serial.print(" | Integral: ");
