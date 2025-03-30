@@ -215,9 +215,18 @@ void loop() {
             //float volt_consigne = consigne/2.91666f - 6.071428f;
 
             //float error = -(volt_consigne - (5 - currSamplet3));
-            float error = (consigne - voltage_to_tempt3(currSamplet3));
-            const float dt = 1.0f / DESIRED_ADC_UPDATE_FREQ;
+            //const float t1 = voltage_to_tempt1(currSamplet1));
+            //const float t2 = voltage_to_tempt1(currSamplet2));
 
+            //t2_est = 
+
+           // t2_est = 
+            
+            float error = (consigne - voltage_to_tempt3(currSamplet3));
+            
+            //float error = (consigne - voltage_to_tempt3(currSamplet3));
+            const float dt = 1.0f / DESIRED_ADC_UPDATE_FREQ;
+            
             // Apply low-pass filter to reduce noise
             //#define ALPHA 0.1
             //error = ALPHA * error + (1 - ALPHA) * previous;
