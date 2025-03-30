@@ -2,14 +2,14 @@ import re
 import matplotlib.pyplot as plt
 
 # File path
-file_path = "WorkingTest.txt"
+file_path = ".\\Raw_data_identification\\data\\identification_20250328_132526.txt"
 
 # Lists to store extracted values
 time_values = []
 adc_t3_values = []
 
 # Regular expression to match time and ADC t3 values
-pattern = re.compile(r"(\d+\.\d+) ms\s+\|.*?ADC t3:\s+([-\d\.]+)")
+pattern = re.compile(r"(\d+\.\d+) s\s+\|.*?ADC t3:\s+([-\d\.]+)")
 
 # Read and parse the file
 with open(file_path, "r") as file:
