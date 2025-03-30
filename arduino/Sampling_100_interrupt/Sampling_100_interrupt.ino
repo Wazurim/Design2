@@ -275,7 +275,7 @@ void loop() {
             // }
 
             // Set PWM output
-            uint16_t pwmValue = (uint16_t) control;
+            uint16_t pwmValue = (uint16_t) consigne;
             OCR1A = pwmValue;
 
             // Store error for next cycle
@@ -409,7 +409,7 @@ float voltage_to_tempt1(float volt) {
     const float C1 = 0.00000260597012072052;
     const float D1 = 0.000000063292612648746;
     const float RT = 10000.0;
-    volt = volt * 1.6f/4.9f + 1.7f;
+    volt = volt * 0.32709f + 1.65306f;
     float res = 5 * (10000 - 2000 * volt) / volt;
     float logVal = log(RT / res);
     float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
@@ -422,7 +422,7 @@ float voltage_to_tempt3(float volt) {
     const float C1 = 0.00000260597012072052;
     const float D1 = 0.000000063292612648746;
     const float RT = 10000.0;
-    volt = volt * 0.7f/4.9f + 2.2f;
+    volt = volt * 0.1599f + 2.0616f;
     float res = 5 * (10000 - 2000 * volt) / volt;
     float logVal = log(RT / res);
     float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
