@@ -210,7 +210,7 @@ void loop() {
 
     if (sampleReady) {
         // Process serial commands if available
-        float estimated_tempt3 = (0.027 * (previous_t2s[2]-25) + 0.9672 * (previous_estimated_t3-25))+25;
+        float estimated_tempt3 = (0.04431 * (previous_t2s[0]-25) + 0.9519 * (previous_estimated_t3-25))+25;
         previous_estimated_t3 = estimated_tempt3;
         previous_t2s[2] = previous_t2s[1];
         previous_t2s[1] = previous_t2s[0];
@@ -436,7 +436,7 @@ float voltage_to_tempt3(float volt) {
     volt = volt * 0.7f/4.9f + 2.2f;
     float res = 5 * (10000 - 2000 * volt) / volt;
     float logVal = log(RT / res);
-    float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
+    float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15 + 0.48;
     return temp;
 }
 
