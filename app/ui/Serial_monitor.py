@@ -59,6 +59,7 @@ class ExcelRecorder:
 
     def parse_and_write(self, line):
         m_s = self.regex_time_s.search(line)
+        print(line)
         if not m_s:
             return
         time_s = float(m_s.group(1))
@@ -147,16 +148,18 @@ class TempPlotWidget(QWidget):
         super().__init__(parent)
 
         # Data arrays
-        self.time_values   = []
-        self.t1_values     = []
-        self.t2_values     = []
-        self.t3_values     = []
-        self.t4_values     = []
-        self.t3_est_values = []
+        self.time_values     = []
+        self.consigne_values = []
+        self.t1_values       = []
+        self.t2_values       = []
+        self.t3_values       = []
+        self.t4_values       = []
+        self.t3_est_values   = []
 
         self.figure, self.ax = plt.subplots()
         self.canvas = FigureCanvas(self.figure)
 
+        self.line_consigne,     = self.ax.plot([], [], label="Consigne")
         self.line_t1,     = self.ax.plot([], [], label="T1")
         self.line_t2,     = self.ax.plot([], [], label="T2")
         self.line_t3,     = self.ax.plot([], [], label="T3")
@@ -188,7 +191,7 @@ class TempPlotWidget(QWidget):
         mt4 = re.search(r"t4:\s*([\d\.]+)", line)
         if not (mt1 and mt2 and mt3 and mt4):
             return
-
+        
         t1_val = float(mt1.group(1))
         t2_val = float(mt2.group(1))
         t3_val = float(mt3.group(1))
@@ -198,6 +201,9 @@ class TempPlotWidget(QWidget):
         mt3e = re.search(r"t3\s*est:\s*([\d\.]+)", line)
         t3_est_val = float(mt3e.group(1)) if mt3e else None
 
+        consigne = re.search(r"consigne:\s*([\d\.]+)", line)
+        consigne_val = float(consigne.group(1)) if consigne else None
+        
         # Append
         self.time_values.append(time_s)
         self.t1_values.append(t1_val)
@@ -209,16 +215,24 @@ class TempPlotWidget(QWidget):
             self.t3_est_values.append(t3_est_val)
         else:
             self.t3_est_values.append(None)
+            
+        if consigne_val is not None:
+            self.consigne_values.append(consigne_val)
+        else:
+            self.consigne_values.append(None)
 
         # Update lines
+        self.line_consigne.set_xdata(self.time_values)
+        self.line_consigne.set_ydata([val if val is not None else float("nan") for val in self.consigne_values])
+        # self.line_consigne.set_ydata(self.consigne_values)
         self.line_t1.set_xdata(self.time_values)
         self.line_t1.set_ydata(self.t1_values)
         self.line_t2.set_xdata(self.time_values)
         self.line_t2.set_ydata(self.t2_values)
         self.line_t3.set_xdata(self.time_values)
         self.line_t3.set_ydata(self.t3_values)
-        self.line_t4.set_xdata(self.time_values)
-        self.line_t4.set_ydata(self.t4_values)
+        # self.line_t4.set_xdata(self.time_values)
+        # self.line_t4.set_ydata(self.t4_values)
 
         # T3_est -> None => NaN
         t3_est_y = [val if val is not None else float("nan") for val in self.t3_est_values]
@@ -231,12 +245,14 @@ class TempPlotWidget(QWidget):
 
     def reset_plot(self):
         self.time_values.clear()
+        self.consigne_values.clear()
         self.t1_values.clear()
         self.t2_values.clear()
         self.t3_values.clear()
         self.t4_values.clear()
         self.t3_est_values.clear()
 
+        self.line_consigne.set_data([], [])
         self.line_t1.set_data([], [])
         self.line_t2.set_data([], [])
         self.line_t3.set_data([], [])
@@ -260,10 +276,10 @@ class CommandPlotWidget(QWidget):
         self.figure, self.ax = plt.subplots()
         self.canvas = FigureCanvas(self.figure)
 
-        self.line_u, = self.ax.plot([], [], label="U (V)")
+        self.line_u, = self.ax.plot([], [], label="U (%)")
 
         self.ax.set_xlabel("Time (s)")
-        self.ax.set_ylabel("Command U (V)")
+        self.ax.set_ylabel("Command U (%)")
         self.ax.set_title("Real-Time Command U")
         self.ax.grid(True)
         self.ax.legend()
@@ -286,7 +302,7 @@ class CommandPlotWidget(QWidget):
         duty_val = float(pwm_m.group(1))
         duty_max = float(pwm_m.group(2))
         ratio = duty_val/duty_max if duty_max else 0.0
-        u_val = ratio * 10.0 - 5.0
+        u_val = -ratio * 200 + 100
 
         self.time_values.append(time_s)
         self.u_values.append(u_val)
@@ -575,7 +591,7 @@ class SerialMonitor(QWidget):
 
 def main():
     app = QApplication(sys.argv)
-    window = SerialMonitor(port="COM4", baudrate=115200)
+    window = SerialMonitor(port="COM9", baudrate=115200)
 
     screen = app.primaryScreen().availableGeometry()
     w = int(screen.width() * 0.8)
