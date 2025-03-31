@@ -23,7 +23,7 @@ with open(file_path, "r") as file:
             t2_values.append(float(match.group(4)))
             t3_values.append(float(match.group(5))+0.48)
 
-np.savetxt('dimanche_test_echelon_lache.txt', np.c_[time_values, pwm_values, t1_values, t2_values, t3_values])
+# np.savetxt('dimanche_test_echelon_lache.txt', np.c_[time_values, pwm_values, t1_values, t2_values, t3_values])
 
 # plt.plot(time_values, pwm_values)
 plt.plot(time_values, t1_values)
