@@ -244,7 +244,7 @@ void loop() {
             // et ensuite changer les valeurs ici. Les valeurs ne sont pas directement celles du PI.
             // Vous pouvez regarder mes notes voir s'il n'y a pas une formule qui permet la conversion
             // directe.
-            float control = (previous_control + error * 0.5025f - previous_error * 0.4975f);
+            float control = (previous_control + error * 1.504f - previous_error * 1.496);
             // float control = 0;
             if (control > 2.5f) {
                 control = 2.5f;
