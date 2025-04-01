@@ -560,10 +560,12 @@ class SerialMonitor(QWidget):
         self._send_line("p")
         self.send_param()
         self.btn_play.setStyleSheet("background-color: lightblue; color: white;")
+        self.btn_play.setText("Update param")
 
     def send_stop(self):
         self._send_line("S")
         self.btn_play.setStyleSheet("background-color: white; color: black;")
+        self.btn_play.setText("Send and play")
 
     def handle_reset(self):
         self.send_reset()
@@ -647,8 +649,8 @@ def main():
     window = SerialMonitor(port="COM9", baudrate=115200)
 
     screen = app.primaryScreen().availableGeometry()
-    w = int(screen.width() * 0.8)
-    h = int(screen.height() * 0.8)
+    w = int(screen.width() * 0.95)
+    h = int(screen.height() * 0.95)
     x = screen.x() + (screen.width() - w)//2
     y = screen.y() + (screen.height() - h)//2
     window.setGeometry(x, y, w, h)
