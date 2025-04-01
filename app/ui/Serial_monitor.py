@@ -343,7 +343,7 @@ class CommandPlotWidget(QWidget):
 
 
 
-        desired_delta = 12
+        desired_delta = 100
         if y_max - y_min < desired_delta:
             center = (y_max + y_min) / 2
             y_min = center - desired_delta / 2
@@ -418,6 +418,7 @@ class SerialMonitor(QWidget):
         # Buttons
         btn_layout = QHBoxLayout()
         self.btn_play = QPushButton("Play")
+        self.btn_play.setStyleSheet("background-color: white; color: black;")
         self.btn_stop = QPushButton("Stop")
         self.btn_reset = QPushButton("Reset")
         self.btn_record = QPushButton("Start Recording")
@@ -441,18 +442,20 @@ class SerialMonitor(QWidget):
         param_layout.addWidget(self.input_con)
 
         param_layout.addWidget(QLabel("P:"))
-        self.input_p = QLineEdit("0.53")
+        self.input_p = QLineEdit("4.9931")
         param_layout.addWidget(self.input_p)
 
         param_layout.addWidget(QLabel("I:"))
-        self.input_i = QLineEdit("0.0049")
+        self.input_i = QLineEdit("0.008689")
         param_layout.addWidget(self.input_i)
 
-        self.btn_param = QPushButton("Send Param")
-        param_layout.addWidget(self.btn_param)
-        self.btn_param.clicked.connect(self.send_param)
-        control_layout.addLayout(param_layout)
+        param_layout.addWidget(QLabel("D:"))
+        self.input_d = QLineEdit("48.2037")
+        param_layout.addWidget(self.input_d)
 
+        param_layout.addWidget(QLabel("F:"))
+        self.input_f = QLineEdit("4.964471")
+        param_layout.addWidget(self.input_f)
 
         self.lbl_stability = QLabel("Stability: unknown")
         self.lbl_stability.setStyleSheet("color: red;")
@@ -553,9 +556,12 @@ class SerialMonitor(QWidget):
     #############################################
     def send_play(self):
         self._send_line("p")
+        self.send_param()
+        self.btn_play.setStyleSheet("background-color: lightblue; color: white;")
 
     def send_stop(self):
         self._send_line("S")
+        self.btn_play.setStyleSheet("background-color: white; color: black;")
 
     def handle_reset(self):
         self.send_reset()
@@ -583,8 +589,8 @@ class SerialMonitor(QWidget):
         # 3) send param
         i = self.input_i.text().strip()
         p = self.input_p.text().strip()
-        d= 48.2037
-        f= 3.964471
+        d = self.input_p.text().strip()
+        f = self.input_p.text().strip()
 
         cmd = f"PARAM C={con} P={p} I={i} D={d} F={f}"
         self._send_line(cmd)
