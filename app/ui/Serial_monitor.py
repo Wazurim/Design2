@@ -177,6 +177,16 @@ class TempPlotWidget(QWidget):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
 
+    def get_moyt3_est(self):
+        
+        if  len(self.t3_values) > 30:
+            t3_moy = sum(self.t3_values[-30:]) / 30
+        else:
+            t3_moy = sum(self.t3_values) / len(self.t3_values)
+
+        return t3_moy
+
+
     @pyqtSlot(str)
     def parse_and_update(self, line):
         match_s = re.search(r"([\d\.]+)\s*s", line)
@@ -460,9 +470,13 @@ class SerialMonitor(QWidget):
         control_layout.addLayout(param_layout)
 
 
-        self.lbl_stability = QLabel("Stability: unknown")
-        self.lbl_stability.setStyleSheet("color: red;")
-        control_layout.addWidget(self.lbl_stability)
+        self.lbl_precision = QLabel("Precision: unknown")
+        self.lbl_precision.setStyleSheet("color: red;")
+        control_layout.addWidget(self.lbl_precision)
+
+        self.lbl_stabilite = QLabel("Stability: unknown")
+        self.lbl_stabilite.setStyleSheet("color: red;")
+        control_layout.addWidget(self.lbl_precision)
         # Raw command
         # = QHBoxLayout()
         #raw_cmd_layout.addWidget(QLabel("Raw Command:"))
@@ -528,25 +542,36 @@ class SerialMonitor(QWidget):
             # just entered
             self.in_stable_zone = True
             self.enter_time = now
-            self.lbl_stability.setStyleSheet("color: green;")
+            self.lbl_precision.setStyleSheet("color: green;")
 
         elif in_zone_now and self.in_stable_zone:
             # still in zone
             elapsed = now - self.enter_time
-            self.lbl_stability.setStyleSheet("color: green;")
+            self.lbl_precision.setStyleSheet("color: green;")
             if elapsed >= 5 * 60:
                 # stable for 5 min
-                self.lbl_stability.setText(f"Stability: stable ≥ 5 min!, elapsed time : {elapsed} seconds.")
+                self.lbl_precision.setText(f"Precision: stable ≥ 5 min!, elapsed time : {elapsed} seconds.")
             else:
-                self.lbl_stability.setText(f"Stability: in zone {int(elapsed)}s (need 300s).")
+                self.lbl_precision.setText(f"Precision: in zone {int(elapsed)}s (need 300s).")
         else:
             # out of zone
             # if self.in_stable_zone:
                 # we just left
-            self.lbl_stability.setText(f"Stability: not stable. Need to be between : {lower} and {upper}.")
+            self.lbl_precision.setText(f"Precision: not stable. Need to be between : {lower} and {upper}.")
             self.in_stable_zone = False
-            self.lbl_stability.setStyleSheet("color: red;")
+            self.lbl_precision.setStyleSheet("color: red;")
             self.enter_time = None
+
+        moy = self.temp_plot.get_moyt3_est()
+        diff = max(moy) - min(moy)
+        if diff < 0.1:
+            self.lbl_stabilite.setText(f"Stabilite: Stable, ecart < 0.1 depuis plus de 30 secondes :)")
+            self.lbl_stabilite.setStyleSheet("color: green;")
+
+        else:
+            self.lbl_stabilite.setText(f"Stabilite: instable :(   Ecart: {diff}")   
+            self.lbl_stabilite.setStyleSheet("color: red;")
+            
 
     def get_current_t3_est(self):
         """Return the last T3 from temp_plot or fallback."""
@@ -572,7 +597,7 @@ class SerialMonitor(QWidget):
         self.send_reset()
         self.temp_plot.reset_plot()
         self.cmd_plot.reset_plot()
-        self.lbl_stability.setText("Stability: reset.")
+        self.lbl_precision.setText("Stability: reset.")
 
     def send_reset(self):
         self._send_line("PARAM C=25.0 I=1.0 K=0.5")
@@ -581,7 +606,7 @@ class SerialMonitor(QWidget):
         # 1) read new setpoint, recalc error
         con = float(self.input_con.text().strip())
         old_temp = self.get_current_t3_est()
-        self.allowable_error = 0.1
+        self.allowable_error = 0.8
 
 
         self.current_setpoint = con
@@ -589,7 +614,7 @@ class SerialMonitor(QWidget):
         # 2) reset timer
         self.enter_time = None
         self.in_stable_zone = False
-        self.lbl_stability.setText(f"Stability: changed setpoint. initial:{old_temp}, allowable:{self.allowable_error} ")
+        self.lbl_precision.setText(f"Precision: changed setpoint. initial:{old_temp}, allowable:{self.allowable_error} ")
 
         # 3) send param
         i = self.input_i.text().strip()
