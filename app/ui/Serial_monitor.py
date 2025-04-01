@@ -156,6 +156,7 @@ class TempPlotWidget(QWidget):
         self.t4_values       = []
         self.t3_est_values   = []
 
+
         self.figure, self.ax = plt.subplots()
         self.canvas = FigureCanvas(self.figure)
 
@@ -221,6 +222,19 @@ class TempPlotWidget(QWidget):
         else:
             self.consigne_values.append(None)
 
+        all_y = self.t1_values + self.t2_values + self.t3_est_values + self.t3_values + self.t4_values + self.consigne_values
+
+        y_min, y_max = min(all_y), max(all_y)
+        desired_delta = 20
+        if y_max - y_min < desired_delta:
+            center = (y_max + y_min) / 2
+            y_min = center - desired_delta / 2
+            y_max = center + desired_delta / 2
+            self.ax.set_ylim(y_min, y_max)
+
+        else:
+            self.ax.autoscale_view()
+
         # Update lines
         self.line_consigne.set_xdata(self.time_values)
         self.line_consigne.set_ydata([val if val is not None else float("nan") for val in self.consigne_values])
@@ -260,7 +274,7 @@ class TempPlotWidget(QWidget):
         self.line_t3_est.set_data([], [])
 
         self.ax.relim()
-        self.ax.autoscale_view()
+
         self.canvas.draw()
 
 
