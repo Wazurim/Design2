@@ -224,8 +224,16 @@ class TempPlotWidget(QWidget):
 
         all_y = self.t1_values + self.t2_values + self.t3_est_values + self.t3_values + self.t4_values + self.consigne_values
 
+        # y_min, y_max = (0, 0)
+
+        all_y = [x for x in all_y if x is not None]
+        
+        # if all_y is not None:
         y_min, y_max = min(all_y), max(all_y)
-        desired_delta = 20
+
+
+
+        desired_delta = 12
         if y_max - y_min < desired_delta:
             center = (y_max + y_min) / 2
             y_min = center - desired_delta / 2
