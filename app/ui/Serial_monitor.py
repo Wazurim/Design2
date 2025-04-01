@@ -181,6 +181,9 @@ class TempPlotWidget(QWidget):
         
         if  len(self.t3_values) > 30:
             t3_moy = sum(self.t3_values[-30:]) / 30
+
+        elif len(self.t3_values) == 0:
+            t3_moy = 0
         else:
             t3_moy = sum(self.t3_values) / len(self.t3_values)
 
