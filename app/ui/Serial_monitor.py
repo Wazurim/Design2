@@ -419,6 +419,7 @@ class SerialMonitor(QWidget):
         btn_layout = QHBoxLayout()
         self.btn_play = QPushButton("Play")
         self.btn_play.setStyleSheet("background-color: white; color: black;")
+        self.btn_play.setText("Send and play")
         self.btn_stop = QPushButton("Stop")
         self.btn_reset = QPushButton("Reset")
         self.btn_record = QPushButton("Start Recording")
