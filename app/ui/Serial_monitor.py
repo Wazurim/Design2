@@ -347,7 +347,7 @@ class SerialMonitor(QWidget):
 
         # For stability tracking
         self.current_setpoint = 25.0
-        self.allowable_error  = 1.25
+        self.allowable_error  = 0.1
         self.in_stable_zone   = False
         self.enter_time       = None
 
@@ -471,7 +471,7 @@ class SerialMonitor(QWidget):
 
 
         now = time.time()
-        in_zone_now = (lower <= t3_val <= upper)
+        in_zone_now = (lower <= t3_val and t3_val <= upper)
 
         if in_zone_now and not self.in_stable_zone:
             # just entered
@@ -490,9 +490,9 @@ class SerialMonitor(QWidget):
                 self.lbl_stability.setText(f"Stability: in zone {int(elapsed)}s (need 300s).")
         else:
             # out of zone
-            if self.in_stable_zone:
+            # if self.in_stable_zone:
                 # we just left
-                self.lbl_stability.setText(f"Stability: not stable. Need to be between : {lower} and {upper}.")
+            self.lbl_stability.setText(f"Stability: not stable. Need to be between : {lower} and {upper}.")
             self.in_stable_zone = False
             self.lbl_stability.setStyleSheet("color: red;")
             self.enter_time = None
@@ -525,11 +525,8 @@ class SerialMonitor(QWidget):
         # 1) read new setpoint, recalc error
         con = float(self.input_con.text().strip())
         old_temp = self.get_current_t3_est()
-        diff = abs(old_temp - con)
-        self.allowable_error = 0.05 * diff
-        
-        if self.allowable_error <= 0.1:
-            self.allowable_error = 0.1
+        self.allowable_error = 0.1
+
 
         self.current_setpoint = con
 
