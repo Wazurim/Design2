@@ -440,12 +440,12 @@ class SerialMonitor(QWidget):
         self.input_con = QLineEdit("25.0")
         param_layout.addWidget(self.input_con)
 
-        param_layout.addWidget(QLabel("Ki:"))
-        self.input_Ki = QLineEdit("1.0")
+        param_layout.addWidget(QLabel("P:"))
+        self.input_p = QLineEdit("0.53")
         param_layout.addWidget(self.input_Ki)
 
-        param_layout.addWidget(QLabel("Kp:"))
-        self.input_Kp = QLineEdit("0.5")
+        param_layout.addWidget(QLabel("I:"))
+        self.input_i = QLineEdit("0.0049")
         param_layout.addWidget(self.input_Kp)
 
         self.btn_param = QPushButton("Send Param")
@@ -453,15 +453,19 @@ class SerialMonitor(QWidget):
         self.btn_param.clicked.connect(self.send_param)
         control_layout.addLayout(param_layout)
 
+
+        self.lbl_stability = QLabel("Stability: unknown")
+        self.lbl_stability.setStyleSheet("color: red;")
+        control_layout.addWidget(self.lbl_stability)
         # Raw command
-        raw_cmd_layout = QHBoxLayout()
-        raw_cmd_layout.addWidget(QLabel("Raw Command:"))
-        self.input_raw_cmd = QLineEdit("PARAM C=25.0 I=1.0 K=0.5")
-        raw_cmd_layout.addWidget(self.input_raw_cmd)
-        self.btn_send_raw = QPushButton("Send")
-        raw_cmd_layout.addWidget(self.btn_send_raw)
-        self.btn_send_raw.clicked.connect(self.send_raw_cmd)
-        control_layout.addLayout(raw_cmd_layout)
+        # = QHBoxLayout()
+        #raw_cmd_layout.addWidget(QLabel("Raw Command:"))
+        #self.input_raw_cmd = QLineEdit("PARAM C=25.0 I=1.0 K=0.5")
+        #raw_cmd_layout.addWidget(self.input_raw_cmd)
+        #self.btn_send_raw = QPushButton("Send")
+        #raw_cmd_layout.addWidget(self.btn_send_raw)
+        #self.btn_send_raw.clicked.connect(self.send_raw_cmd)
+        #control_layout.addLayout(raw_cmd_layout)
 
         # Text area
         self.text_area = QPlainTextEdit()
@@ -469,9 +473,7 @@ class SerialMonitor(QWidget):
         control_layout.addWidget(self.text_area)
 
         # **Add a stability label** here (outside the graph)
-        self.lbl_stability = QLabel("Stability: unknown")
-        self.lbl_stability.setStyleSheet("color: red;")
-        control_layout.addWidget(self.lbl_stability)
+        
 
         # Plots
         self.temp_plot = TempPlotWidget()
@@ -579,15 +581,18 @@ class SerialMonitor(QWidget):
         self.lbl_stability.setText(f"Stability: changed setpoint. initial:{old_temp}, allowable:{self.allowable_error} ")
 
         # 3) send param
-        Ki = self.input_Ki.text().strip()
-        Kp = self.input_Kp.text().strip()
-        cmd = f"PARAM C={con} I={Ki} K={Kp}"
+        i = self.input_i.text().strip()
+        p = self.input_p.text().strip()
+        d= 48.2037
+        f= 3.964471
+
+        cmd = f"PARAM C={con} P={p} I={i} D={d} F={f}"
         self._send_line(cmd)
         self.excel_recorder.set_consigne(con)
 
-    def send_raw_cmd(self):
-        raw_cmd = self.input_raw_cmd.text().strip()
-        self._send_line(raw_cmd)
+    #def send_raw_cmd(self):
+    #    raw_cmd = self.input_raw_cmd.text().strip()
+    #    self._send_line(raw_cmd)
 
     def _send_line(self, data_str):
         if self.ser and self.ser.is_open:

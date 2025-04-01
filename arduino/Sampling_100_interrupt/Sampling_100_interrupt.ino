@@ -57,8 +57,10 @@ float Time = 0;
 float CurrentTime = 0;
 float consigne = 25; // Setpoint voltage
 
-float Kp = 0.88;   // Start with a low value; adjust experimentally.
-float Ki = 1/101.72;   // Start with a low value; adjust experimentally.
+float P = 0.88;   // Start with a low value; adjust experimentally.
+float I = 1/101.72;
+float D = 0;
+float F = 0;   // Start with a low value; adjust experimentally.
 // float previous = PWM_TOP/2;
 float previous_control = 0;
 float previous_error = 0;
@@ -349,7 +351,6 @@ void handleLine(const String &line) {
         Time = CurrentTime + Time;
         CurrentTime = 0;
 
-        Serial.println("RESET - send new parameters via 'PARAM C=... F=...'");
     } else if (line.startsWith("PARAM")) {
         parseParameters(line);
     } else {
@@ -360,57 +361,61 @@ void handleLine(const String &line) {
 
 void parseParameters(const String &line) {
     int indexC = line.indexOf("C=");
+    int indexP = line.indexOf("P=");
     int indexI = line.indexOf("I=");
-    int indexK = line.indexOf("K=");
-    if (indexC == -1) {
-        Serial.println("Invalid PARAM C syntax. Use: PARAM C=2.5 I=1.0 K=0.5");
-        Serial.println(line);
-        return;
-    }
-    if (indexI == -1) {
-        Serial.println("Invalid PARAM I syntax. Use: PARAM C=2.5 I=1.0 K=0.5");
-
-        return;
-    }
-    if (indexK == -1) {
-        Serial.println("Invalid PARAM I syntax. Use: PARAM C=2.5 I=1.0 K=0.5");
-
+    int indexD = line.indexOf("D=");
+    int indexF = line.indexOf("F=");
+    if (indexC == -1 || indexP == -1 || indexI == -1 || indexD == -1 || indexF == -1) {
+        Serial.println("Invalid PARAM syntax. Use: PARAM C=... P=... I=... D=... F=...");
         return;
     }
     {
         int start = indexC + 2;
         int end = line.indexOf(' ', start);
-        if (end == -1) {
-            end = indexI;
-        }
+        if (end == -1) { end = line.indexOf("P="); if(end == -1) end = line.length(); }
         String valC = line.substring(start, end);
         consigne = valC.toFloat();
     }
     {
-        int start = indexI + 2;
+        int start = indexP + 2;
         int end = line.indexOf(' ', start);
-        if (end == -1) {
-            end = line.length();
-        }
-        String valI = line.substring(start, end);
-        // Frequency parameter received but not reconfigured at runtime in this example.
-        Serial.print("New KI parameter received (not applied at runtime): ");
-        Serial.println(valI);
+        if (end == -1) { end = line.indexOf("I="); if(end == -1) end = line.length(); }
+        String valP = line.substring(start, end);
+        Serial.print("New P parameter received (not applied at runtime): ");
+        Serial.println(valP);
+        P = valP.toFloat()
     }
     {
-        int start = indexK + 2;
+        int start = indexI + 2;
         int end = line.indexOf(' ', start);
-        if (end == -1) {
-            end = line.length();
-        }
-        String valK = line.substring(start, end);
-        // Frequency parameter received but not reconfigured at runtime in this example.
-        Serial.print("New KP parameter received (not applied at runtime): ");
-        Serial.println(valK);
+        if (end == -1) { end = line.indexOf("D="); if(end == -1) end = line.length(); }
+        String valI = line.substring(start, end);
+        Serial.print("New I parameter received (not applied at runtime): ");
+        Serial.println(valI);
+        I = valI.toFloat()
+    }
+    {
+        int start = indexD + 2;
+        int end = line.indexOf(' ', start);
+        if (end == -1) { end = line.indexOf("F="); if(end == -1) end = line.length(); }
+        String valD = line.substring(start, end);
+        Serial.print("New D parameter received (not applied at runtime): ");
+        Serial.println(valD)
+        D = valD.toFloat()
+    }
+    {
+        int start = indexF + 2;
+        int end = line.indexOf(' ', start);
+        if (end == -1) { end = line.length(); }
+        String valF = line.substring(start, end);
+        Serial.print("New F parameter received (not applied at runtime): ");
+        Serial.println(valF);
+        F = valF.toFloat()
     }
     Serial.print("New setpoint (consigne) -> ");
     Serial.println(consigne);
 }
+
 
 float voltage_to_tempt1(float volt) {
     const float A1 = 0.00335401643468053;
