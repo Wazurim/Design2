@@ -594,7 +594,7 @@ class SerialMonitor(QWidget):
                
 
         if self.in_stable_zone and self.in_precise_zone and not self.time_counting:
-            self.enter_time = now + 20
+            self.enter_time = now - 20
             self.lbl_timer.setStyleSheet("color: green;")
             self.time_counting = True
             

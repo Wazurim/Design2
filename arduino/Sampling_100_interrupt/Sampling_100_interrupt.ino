@@ -67,6 +67,7 @@ float previous_error = 0;
 float previous_t2s[] = {25, 25, 25};
 float previous_estimated_t3 = -1; 
 bool isFirstPI = true;
+int time_counter = 0;
 // float integral = 0;
 const float dt = 1/DESIRED_ADC_UPDATE_FREQ; // Assuming your ADC update is 1 Hz
 
@@ -257,21 +258,29 @@ void loop() {
             // et ensuite changer les valeurs ici. Les valeurs ne sont pas directement celles du PI.
             // Vous pouvez regarder mes notes voir s'il n'y a pas une formule qui permet la conversion
             // directe.
-            float p = 5.9931;
-            float i = 0.018689;
-            float d = 48.2037;
-            float f = 3.964471;
+            // float p = 5.9931;
+            // float i = 0.018689;
+            // float d = 48.2037;
+            // float f = 3.964471;
 
-            // float p = P;
-            // float i = I;
-            // float d = D;
-            // float f = F;
+            float p = P;
+            float i = I;
+            float d = D;
+            float f = F;
 
             float control = (error * (p + p * f / 2 + i / 2 + d * f) + previous_error * (i / 2 - d * f) + previous_control *  (1 - f/2))/(1 + f/2);
-            if ((error < 1 && error > -1) || !isFirstPI) {
-              isFirstPI = false;
-              control = (previous_control + error * 0.53245 - previous_error * 0.52755);
-            }
+            // if (error < 0.3 && error > -0.3) {
+            //   // isFirstPI = false;
+            //   time_counter++;
+            // }
+            // else {
+            //   time_counter = 0;
+            // }
+
+            // if (time_counter > 60) {
+            //   control = (previous_control + error * 0.53245 - previous_error * 0.52755);
+            // }
+
             // float control = 0;
             if (control > 2.5f) {
                 control = 2.5f;
@@ -413,19 +422,19 @@ void parseParameters(const String &line) {
         } else if (token.startsWith("P=")) {
             P = token.substring(2).toFloat();
             Serial.print("New P parameter received: ");
-            Serial.println(P);
+            Serial.println(P, 10);
         } else if (token.startsWith("I=")) {
             I = token.substring(2).toFloat();
             Serial.print("New I parameter received: ");
-            Serial.println(I);
+            Serial.println(I, 10);
         } else if (token.startsWith("D=")) {
             D = token.substring(2).toFloat();
             Serial.print("New D parameter received: ");
-            Serial.println(D);
+            Serial.println(D, 10);
         } else if (token.startsWith("F=")) {
             F = token.substring(2).toFloat();
             Serial.print("New F parameter received: ");
-            Serial.println(F);
+            Serial.println(F, 10);
         }
         if (nextSpace == -1) break;
         lastSpace = nextSpace + 1;
