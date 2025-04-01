@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-f = open("essaie2_temp.txt", "r")
+f = open("dimanche_test_echelon_lache.txt", "r")
 
 time = []
 u = []
@@ -23,19 +23,30 @@ for i in range(5, len(temp1)):
     estimate_2.append((0.023 * (temp1[i-5] - 25) + 0.9672 * (estimate_2[i-1]-25))+25)
 
 estimate_3 = [temp3[0], temp3[1], temp3[2]]
+
 for i in range(3, len(temp2)):
-    estimate_3.append(((0.027 * (temp2[i-3]-25) + 0.9672 * (estimate_3[i-1]-25)))+25)
-    
+    estimate_3.append(((0.04431 * (temp2[i-1]-25) + 0.9519 * (estimate_3[i-1]-25)))+25)
 
-plt.plot(time, estimate_3)
+
+estimate_3_1 = [temp3[0], temp3[1]]
+
+for i in range(2, len(temp1)):
+    estimate_3_1.append(((0.984 * (estimate_3_1[i-1]-25) + 0.01171 * (temp1[i-1]-25)))+25)
+
+
+# plt.plot(time, estimate_3)
+# plt.plot(time, temp3)
+# plt.plot(time, temp2)
+# plt.plot(time, estimate_2)
+
+plt.plot(time, estimate_3_1)
 plt.plot(time, temp3)
-plt.plot(time, temp2)
-plt.plot(time, estimate_2)
 
-plt.legend(['estimated t3 from t2', 't3','t2', 'estimated t2 from t1'])
+
+plt.legend(['estimated t3 from t1', 't3'])
 plt.show()
 
-difference = abs(np.subtract(temp3, estimate_3))
+difference = abs(np.subtract(temp3, estimate_3_1))
 
 diff_mean = np.mean(difference)
 print(diff_mean)
