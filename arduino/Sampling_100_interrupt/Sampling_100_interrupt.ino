@@ -64,6 +64,8 @@ float F = 0;   // Start with a low value; adjust experimentally.
 // float previous = PWM_TOP/2;
 float previous_control = 0;
 float previous_error = 0;
+float previous_t2s[] = {25, 25, 25};
+float previous_estimated_t3 = -1; 
 // float integral = 0;
 const float dt = 1/DESIRED_ADC_UPDATE_FREQ; // Assuming your ADC update is 1 Hz
 
@@ -211,7 +213,18 @@ void loop() {
     if (sampleReady) {
         // Process serial commands if available
         
-        
+        if (previous_estimated_t3 < 0) {
+
+          previous_estimated_t3 = voltage_to_tempt1(currSamplet2);
+
+        }
+
+        float estimated_tempt3 = (0.04431 * (previous_t2s[0]-25) + 0.9519 * (previous_estimated_t3-25))+25;
+        previous_estimated_t3 = estimated_tempt3;
+        previous_t2s[2] = previous_t2s[1];
+        previous_t2s[1] = previous_t2s[0];
+        previous_t2s[0] = voltage_to_tempt1(currSamplet2);
+
         if (running) {
 
             //float volt_consigne = consigne/2.91666f - 6.071428f;
@@ -224,7 +237,7 @@ void loop() {
 
            // t2_est = 
             
-            float error = (consigne - voltage_to_tempt3(currSamplet3));
+            float error = (consigne - estimated_tempt3);
             
             //float error = (consigne - voltage_to_tempt3(currSamplet3));
             const float dt = 1.0f / DESIRED_ADC_UPDATE_FREQ;
@@ -243,7 +256,13 @@ void loop() {
             // et ensuite changer les valeurs ici. Les valeurs ne sont pas directement celles du PI.
             // Vous pouvez regarder mes notes voir s'il n'y a pas une formule qui permet la conversion
             // directe.
-            float control = (previous_control + error * 0.5025f - previous_error * 0.4975f);
+            // float control = (previous_control + error * 0.53245 - previous_error * 0.52755);
+            float p = 5.9931;
+            float i = 0.008689;
+            float d = 48.2037;
+            float f = 3.964471;
+
+            float control = (error * (p + p * f / 2 + i / 2 + d * f) + previous_error * (i / 2 - d * f) + previous_control *  (1 - f/2))/(1 + f/2);
             // float control = 0;
             if (control > 2.5f) {
                 control = 2.5f;
@@ -286,7 +305,7 @@ void loop() {
             // }
 
             // Set PWM output
-            uint16_t pwmValue = (uint16_t) consigne;
+            uint16_t pwmValue = (uint16_t) control;
             OCR1A = pwmValue;
 
             // Store error for next cycle
@@ -294,40 +313,44 @@ void loop() {
 
             //float control = ((0.8603f/(previous - 0.9805)) * (5-error) + 2.5)*PWM_TOP/5;           
             
-            Serial.print(trueTime * 1000, 1);  // Time in ms
-            Serial.print(" ms \t| PWM duty: ");
+            Serial.print(trueTime * 1, 1);  // Time in ms
+            Serial.print(" s | PWM : ");
             Serial.print(pwmValue);
             Serial.print(" / ");
             Serial.print(PWM_TOP);
-            Serial.print(" | ADC t1: ");
+            Serial.print(" | consigne: ");
+            Serial.print(consigne, 3);
+            Serial.print(" | t1: ");
             Serial.print(voltage_to_tempt1(currSamplet1), 3);
-            Serial.print(" | ADC t2: ");
+            Serial.print(" | t2: ");
             Serial.print(voltage_to_tempt1(currSamplet2), 3);
-            Serial.print(" | ADC t3: ");
+            Serial.print(" | t3: ");
             Serial.print(voltage_to_tempt3(currSamplet3), 3);
-            Serial.print(" | ADC t4: ");
+            Serial.print(" | t3 est: ");
+            Serial.print(estimated_tempt3, 3);
+            Serial.print(" | t4: ");
             Serial.print(voltage_to_tempt3(currSamplet4), 3);
-            Serial.print(" | ADC t3 RAW: ");
-            Serial.print(currSamplet3, 3);
-            Serial.print(" |\t error: ");
+            Serial.print(" | error: ");
             Serial.println(error, 3);
             // Serial.print(" | Integral: ");
             //Serial.println(integral, 3);
         }
         else {
             OCR1A = PWM_TOP/2;
-            Serial.print(trueTime * 1000, 1);
-            Serial.print(" ms \t| PWM duty: ");
+            Serial.print(trueTime * 1, 1);
+            Serial.print(" s | PWM : ");
             Serial.print(PWM_TOP / 2);
             Serial.print(" / ");
             Serial.print(PWM_TOP);
-            Serial.print(" | ADC t1: ");
+            Serial.print(" | t1: ");
             Serial.print(voltage_to_tempt1(currSamplet1), 3);
-            Serial.print(" | ADC t2: ");
+            Serial.print(" | t2: ");
             Serial.print(voltage_to_tempt1(currSamplet2), 3);
-            Serial.print(" | ADC t3: ");
+            Serial.print(" | t3: ");
             Serial.print(voltage_to_tempt3(currSamplet3), 3);
-            Serial.print(" | ADC t4: ");
+            Serial.print(" | t3 est: ");
+            Serial.print(estimated_tempt3, 3);
+            Serial.print(" | t4: ");
             Serial.print(voltage_to_tempt3(currSamplet4), 3);
             Serial.println("\t Control OFF");
         }
@@ -383,7 +406,7 @@ void parseParameters(const String &line) {
         String valP = line.substring(start, end);
         Serial.print("New P parameter received (not applied at runtime): ");
         Serial.println(valP);
-        P = valP.toFloat()
+        P = valP.toFloat();
     }
     {
         int start = indexI + 2;
@@ -392,7 +415,7 @@ void parseParameters(const String &line) {
         String valI = line.substring(start, end);
         Serial.print("New I parameter received (not applied at runtime): ");
         Serial.println(valI);
-        I = valI.toFloat()
+        I = valI.toFloat();
     }
     {
         int start = indexD + 2;
@@ -400,8 +423,8 @@ void parseParameters(const String &line) {
         if (end == -1) { end = line.indexOf("F="); if(end == -1) end = line.length(); }
         String valD = line.substring(start, end);
         Serial.print("New D parameter received (not applied at runtime): ");
-        Serial.println(valD)
-        D = valD.toFloat()
+        Serial.println(valD);
+        D = valD.toFloat();
     }
     {
         int start = indexF + 2;
@@ -410,7 +433,7 @@ void parseParameters(const String &line) {
         String valF = line.substring(start, end);
         Serial.print("New F parameter received (not applied at runtime): ");
         Serial.println(valF);
-        F = valF.toFloat()
+        F = valF.toFloat();
     }
     Serial.print("New setpoint (consigne) -> ");
     Serial.println(consigne);
@@ -436,7 +459,7 @@ float voltage_to_tempt3(float volt) {
     const float C1 = 0.00000260597012072052;
     const float D1 = 0.000000063292612648746;
     const float RT = 10000.0;
-    volt = volt * 0.1599f + 2.0616f;
+    volt = volt * 0.1599f + 2.0406f;
     float res = 5 * (10000 - 2000 * volt) / volt;
     float logVal = log(RT / res);
     float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
