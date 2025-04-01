@@ -381,63 +381,49 @@ void handleLine(const String &line) {
         Serial.println(line);
     }
 }
-
 void parseParameters(const String &line) {
-    int indexC = line.indexOf("C=");
-    int indexP = line.indexOf("P=");
-    int indexI = line.indexOf("I=");
-    int indexD = line.indexOf("D=");
-    int indexF = line.indexOf("F=");
-    if (indexC == -1 || indexP == -1 || indexI == -1 || indexD == -1 || indexF == -1) {
+    // Remove the command prefix (e.g., "PARAM ") 
+    int firstSpace = line.indexOf(' ');
+    if(firstSpace == -1) {
         Serial.println("Invalid PARAM syntax. Use: PARAM C=... P=... I=... D=... F=...");
         return;
     }
-    {
-        int start = indexC + 2;
-        int end = line.indexOf(' ', start);
-        if (end == -1) { end = line.indexOf("P="); if(end == -1) end = line.length(); }
-        String valC = line.substring(start, end);
-        consigne = valC.toFloat();
-    }
-    {
-        int start = indexP + 2;
-        int end = line.indexOf(' ', start);
-        if (end == -1) { end = line.indexOf("I="); if(end == -1) end = line.length(); }
-        String valP = line.substring(start, end);
-        Serial.print("New P parameter received (not applied at runtime): ");
-        Serial.println(valP);
-        P = valP.toFloat();
-    }
-    {
-        int start = indexI + 2;
-        int end = line.indexOf(' ', start);
-        if (end == -1) { end = line.indexOf("D="); if(end == -1) end = line.length(); }
-        String valI = line.substring(start, end);
-        Serial.print("New I parameter received (not applied at runtime): ");
-        Serial.println(valI);
-        I = valI.toFloat();
-    }
-    {
-        int start = indexD + 2;
-        int end = line.indexOf(' ', start);
-        if (end == -1) { end = line.indexOf("F="); if(end == -1) end = line.length(); }
-        String valD = line.substring(start, end);
-        Serial.print("New D parameter received (not applied at runtime): ");
-        Serial.println(valD);
-        D = valD.toFloat();
-    }
-    {
-        int start = indexF + 2;
-        int end = line.indexOf(' ', start);
-        if (end == -1) { end = line.length(); }
-        String valF = line.substring(start, end);
-        Serial.print("New F parameter received (not applied at runtime): ");
-        Serial.println(valF);
-        F = valF.toFloat();
+    String params = line.substring(firstSpace + 1);
+    int lastSpace = 0;
+    while (true) {
+        int nextSpace = params.indexOf(' ', lastSpace);
+        String token;
+        if (nextSpace == -1) {
+            token = params.substring(lastSpace);
+        } else {
+            token = params.substring(lastSpace, nextSpace);
+        }
+        if (token.startsWith("C=")) {
+            consigne = token.substring(2).toFloat();
+        } else if (token.startsWith("P=")) {
+            P = token.substring(2).toFloat();
+            Serial.print("New P parameter received: ");
+            Serial.println(P);
+        } else if (token.startsWith("I=")) {
+            I = token.substring(2).toFloat();
+            Serial.print("New I parameter received: ");
+            Serial.println(I);
+        } else if (token.startsWith("D=")) {
+            D = token.substring(2).toFloat();
+            Serial.print("New D parameter received: ");
+            Serial.println(D);
+        } else if (token.startsWith("F=")) {
+            F = token.substring(2).toFloat();
+            Serial.print("New F parameter received: ");
+            Serial.println(F);
+        }
+        if (nextSpace == -1) break;
+        lastSpace = nextSpace + 1;
     }
     Serial.print("New setpoint (consigne) -> ");
     Serial.println(consigne);
 }
+
 
 
 float voltage_to_tempt1(float volt) {
