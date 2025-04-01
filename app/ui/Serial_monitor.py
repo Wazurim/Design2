@@ -177,18 +177,6 @@ class TempPlotWidget(QWidget):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
 
-    def get_moyt3_est(self):
-        
-        if  len(self.t3_values) > 30:
-            t3_moy = sum(self.t3_values[-30:]) / 30
-
-        elif len(self.t3_values) == 0:
-            t3_moy = 0
-        else:
-            t3_moy = sum(self.t3_values) / len(self.t3_values)
-
-        return t3_moy
-
 
     @pyqtSlot(str)
     def parse_and_update(self, line):
@@ -403,7 +391,7 @@ class SerialMonitor(QWidget):
 
         # For stability tracking
         self.current_setpoint = 25.0
-        self.allowable_error  = 0.1
+        self.allowable_error  = 0.8
         self.in_stable_zone   = False
         self.enter_time       = None
 
@@ -479,7 +467,7 @@ class SerialMonitor(QWidget):
 
         self.lbl_stabilite = QLabel("Stability: unknown")
         self.lbl_stabilite.setStyleSheet("color: red;")
-        control_layout.addWidget(self.lbl_precision)
+        control_layout.addWidget(self.lbl_stabilite)
         # Raw command
         # = QHBoxLayout()
         #raw_cmd_layout.addWidget(QLabel("Raw Command:"))
@@ -560,21 +548,28 @@ class SerialMonitor(QWidget):
             # out of zone
             # if self.in_stable_zone:
                 # we just left
-            self.lbl_precision.setText(f"Precision: not stable. Need to be between : {lower} and {upper}.")
+            self.lbl_precision.setText(f"Precision: Bad, need to be between : {lower} and {upper}.")
             self.in_stable_zone = False
             self.lbl_precision.setStyleSheet("color: red;")
             self.enter_time = None
 
-        moy = self.temp_plot.get_moyt3_est()
-        diff = max(moy) - min(moy)
-        if diff < 0.1:
-            self.lbl_stabilite.setText(f"Stabilite: Stable, ecart < 0.1 depuis plus de 30 secondes :)")
-            self.lbl_stabilite.setStyleSheet("color: green;")
 
+        if len(self.temp_plot.t3_est_values) > 20:
+            last_values_t3_est = self.temp_plot.t3_est_values[-20:]
+            diff = max(last_values_t3_est) -min(last_values_t3_est)
+
+            if diff < 0.1:
+                self.lbl_stabilite.setText(f"Stabilite: Stable, ecart < 0.1 depuis plus de 30 secondes :)")
+                self.lbl_stabilite.setStyleSheet("color: green;")
+
+            else:
+                self.lbl_stabilite.setText(f"Stabilite: instable :(   Ecart: {diff}")   
+                self.lbl_stabilite.setStyleSheet("color: red;")
         else:
-            self.lbl_stabilite.setText(f"Stabilite: instable :(   Ecart: {diff}")   
-            self.lbl_stabilite.setStyleSheet("color: red;")
-            
+            self.lbl_stabilite.setText(f"Stabilite: calibrating")   
+            self.lbl_stabilite.setStyleSheet("color: orange;")
+               
+                    
 
     def get_current_t3_est(self):
         """Return the last T3 from temp_plot or fallback."""
@@ -622,8 +617,8 @@ class SerialMonitor(QWidget):
         # 3) send param
         i = self.input_i.text().strip()
         p = self.input_p.text().strip()
-        d = self.input_p.text().strip()
-        f = self.input_p.text().strip()
+        d = self.input_d.text().strip()
+        f = self.input_f.text().strip()
 
         cmd = f"PARAM C={con} P={p} I={i} D={d} F={f}"
         self._send_line(cmd)
@@ -675,7 +670,7 @@ class SerialMonitor(QWidget):
 
 def main():
     app = QApplication(sys.argv)
-    window = SerialMonitor(port="COM9", baudrate=115200)
+    window = SerialMonitor(port="COM6", baudrate=115200)
 
     screen = app.primaryScreen().availableGeometry()
     w = int(screen.width() * 0.95)
