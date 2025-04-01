@@ -393,7 +393,9 @@ class SerialMonitor(QWidget):
         self.current_setpoint = 25.0
         self.allowable_error  = 0.8
         self.in_stable_zone   = False
+        self.in_precise_zone   = False
         self.enter_time       = None
+        self.time_counting = False
 
         self._build_ui()
 
@@ -468,6 +470,10 @@ class SerialMonitor(QWidget):
         self.lbl_stabilite = QLabel("Stability: unknown")
         self.lbl_stabilite.setStyleSheet("color: red;")
         control_layout.addWidget(self.lbl_stabilite)
+
+        self.lbl_timer = QLabel("N/A")
+        self.lbl_timer.setStyleSheet("color: red;")
+        control_layout.addWidget(self.lbl_timer)
         # Raw command
         # = QHBoxLayout()
         #raw_cmd_layout.addWidget(QLabel("Raw Command:"))
@@ -517,6 +523,7 @@ class SerialMonitor(QWidget):
     # STABILITY LOGIC
     #############################################
     def check_stability_zone(self, line):
+        
         mt3e = re.search(r"t3\s*est:\s*([\d\.]+)", line)
         if not mt3e:
             return
@@ -529,29 +536,27 @@ class SerialMonitor(QWidget):
         now = time.time()
         in_zone_now = (lower <= t3_val and t3_val <= upper)
 
-        if in_zone_now and not self.in_stable_zone:
+        if in_zone_now:
             # just entered
-            self.in_stable_zone = True
-            self.enter_time = now
+            self.in_precise_zone = True
             self.lbl_precision.setStyleSheet("color: green;")
+            self.lbl_precision.setText(f"Precision: in zone.")
 
-        elif in_zone_now and self.in_stable_zone:
-            # still in zone
-            elapsed = now - self.enter_time
-            self.lbl_precision.setStyleSheet("color: green;")
-            if elapsed >= 5 * 60:
-                # stable for 5 min
-                self.lbl_precision.setText(f"Precision: stable ≥ 5 min!, elapsed time : {elapsed} seconds.")
-            else:
-                self.lbl_precision.setText(f"Precision: in zone {int(elapsed)}s (need 300s).")
+        #elif in_zone_now and self.in_stable_zone:
+        #    # still in zone
+        #    elapsed = now - self.enter_time
+        #    self.lbl_precision.setStyleSheet("color: green;")
+        #    if elapsed >= 5 * 60:
+        #        # stable for 5 min
+        #        self.lbl_precision.setText(f"Precision: stable ≥ 5 min!, elapsed time : {elapsed} seconds.")
+        #    else:
+        #        self.lbl_precision.setText(f"Precision: in zone {int(elapsed)}s (need 300s).")
         else:
-            # out of zone
-            # if self.in_stable_zone:
-                # we just left
             self.lbl_precision.setText(f"Precision: Bad, need to be between : {lower} and {upper}.")
-            self.in_stable_zone = False
+            self.in_precise_zone = False
+            self.time_counting = False
             self.lbl_precision.setStyleSheet("color: red;")
-            self.enter_time = None
+
 
 
         if len(self.temp_plot.t3_est_values) > 20:
@@ -559,16 +564,36 @@ class SerialMonitor(QWidget):
             diff = max(last_values_t3_est) -min(last_values_t3_est)
 
             if diff < 0.1:
-                self.lbl_stabilite.setText(f"Stabilite: Stable, ecart < 0.1 depuis plus de 30 secondes :)")
+                self.lbl_stabilite.setText(f"Stabilite: Stable, ecart < 0.1 depuis plus de 20 secondes :)")
                 self.lbl_stabilite.setStyleSheet("color: green;")
+                self.in_stable_zone = True
 
             else:
                 self.lbl_stabilite.setText(f"Stabilite: instable :(   Ecart: {diff}")   
                 self.lbl_stabilite.setStyleSheet("color: red;")
+                self.in_stable_zone = False
+                self.time_counting = False
+                
         else:
             self.lbl_stabilite.setText(f"Stabilite: calibrating")   
             self.lbl_stabilite.setStyleSheet("color: orange;")
+            self.in_stable_zone = False
+            self.time_counting = False
                
+
+        if self.in_stable_zone and self.in_precise_zone and not self.time_counting:
+            self.enter_time = now + 20
+            self.lbl_timer.setStyleSheet("color: green;")
+            self.time_counting = True
+            
+        elif self.in_stable_zone and self.in_precise_zone and self.time_counting:
+            elapsed = now - self.enter_time
+            self.lbl_timer.setText(f"In zones :) : elapsed: {elapsed}")
+        else:
+            self.enter_time = now + 20
+            self.lbl_timer.setStyleSheet("color: red;")
+            self.lbl_timer.setText(f"N/A")
+
                     
 
     def get_current_t3_est(self):
