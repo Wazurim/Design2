@@ -244,7 +244,7 @@ void loop() {
             // et ensuite changer les valeurs ici. Les valeurs ne sont pas directement celles du PI.
             // Vous pouvez regarder mes notes voir s'il n'y a pas une formule qui permet la conversion
             // directe.
-            float control = (previous_control + error * 1.504f - previous_error * 1.496);
+            float control = (previous_control + error * 0.53245 - previous_error * 0.52755);
             // float control = 0;
             if (control > 2.5f) {
                 control = 2.5f;
@@ -438,10 +438,10 @@ float voltage_to_tempt3(float volt) {
     const float C1 = 0.00000260597012072052;
     const float D1 = 0.000000063292612648746;
     const float RT = 10000.0;
-    volt = volt * 0.1599f + 2.0616f;
+    volt = volt * 0.1599f + 2.0406f;
     float res = 5 * (10000 - 2000 * volt) / volt;
     float logVal = log(RT / res);
-    float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15 + 0.48;
+    float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
     return temp;
 }
 
