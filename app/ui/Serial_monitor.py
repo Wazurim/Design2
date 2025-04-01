@@ -442,11 +442,11 @@ class SerialMonitor(QWidget):
 
         param_layout.addWidget(QLabel("P:"))
         self.input_p = QLineEdit("0.53")
-        param_layout.addWidget(self.input_Ki)
+        param_layout.addWidget(self.input_p)
 
         param_layout.addWidget(QLabel("I:"))
         self.input_i = QLineEdit("0.0049")
-        param_layout.addWidget(self.input_Kp)
+        param_layout.addWidget(self.input_i)
 
         self.btn_param = QPushButton("Send Param")
         param_layout.addWidget(self.btn_param)
