@@ -456,6 +456,8 @@ class SerialMonitor(QWidget):
         param_layout.addWidget(QLabel("F:"))
         self.input_f = QLineEdit("4.964471")
         param_layout.addWidget(self.input_f)
+        control_layout.addWidget(param_layout)
+
 
         self.lbl_stability = QLabel("Stability: unknown")
         self.lbl_stability.setStyleSheet("color: red;")
