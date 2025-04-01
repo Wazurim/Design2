@@ -1,0 +1,13 @@
+404.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.730 | ADC t2: 16.242 | ADC t3: 17.801 | ADC t3 estimate: 17.865 |	 error: 4077.135
+405.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.759 | ADC t2: 16.271 | ADC t3: 17.788 | ADC t3 estimate: 17.862 |	 error: 4077.138
+406.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.788 | ADC t2: 16.300 | ADC t3: 17.788 | ADC t3 estimate: 17.859 |	 error: 4077.141
+407.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.817 | ADC t2: 16.328 | ADC t3: 17.801 | ADC t3 estimate: 17.857 |	 error: 4077.143
+408.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.817 | ADC t2: 16.300 | ADC t3: 17.801 | ADC t3 estimate: 17.855 |	 error: 4077.145
+409.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.788 | ADC t2: 16.271 | ADC t3: 17.788 | ADC t3 estimate: 17.855 |	 error: 4077.145
+410.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.759 | ADC t2: 16.271 | ADC t3: 17.801 | ADC t3 estimate: 17.855 |	 error: 4077.145
+411.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.759 | ADC t2: 16.271 | ADC t3: 17.801 | ADC t3 estimate: 17.854 |	 error: 4077.145
+412.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.700 | ADC t2: 16.271 | ADC t3: 17.801 | ADC t3 estimate: 17.853 |	 error: 4077.147
+413.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.700 | ADC t2: 16.242 | ADC t3: 17.801 | ADC t3 estimate: 17.852 |	 error: 4077.148
+414.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.730 | ADC t2: 16.242 | ADC t3: 17.801 | ADC t3 estimate: 17.851 |	 error: 4077.149
+415.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.759 | ADC t2: 16.242 | ADC t3: 17.788 | ADC t3 estimate: 17.849 |	 error: 4077.151
+416.0 s 	| PWM duty: 4095 / 4095 | ADC t1: 13.904 | ADC t2: 16.271 | ADC t3: 17.826 | ADC t3 estimate: 17.848 |	 error: 4077.152

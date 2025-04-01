@@ -60,10 +60,10 @@ float consigne = 25; // Setpoint voltage
 float Kp = 0.88;   // Start with a low value; adjust experimentally.
 float Ki = 1/101.72;   // Start with a low value; adjust experimentally.
 // float previous = PWM_TOP/2;
-float previous_control = 25;
+float previous_control = 0;
 float previous_error = 0;
 float previous_t2s[] = {25, 25, 25};
-float previous_estimated_t3 = 25;
+float previous_estimated_t3 = -1;
 // float integral = 0;
 const float dt = 1/DESIRED_ADC_UPDATE_FREQ; // Assuming your ADC update is 1 Hz
 
@@ -210,7 +210,10 @@ void loop() {
 
     if (sampleReady) {
         // Process serial commands if available
-        float estimated_tempt3 = (0.027 * (previous_t2s[2]-25) + 0.9672 * (previous_estimated_t3-25))+25;
+        if (previous_estimated_t3 < 0) {
+          previous_estimated_t3 = voltage_to_tempt1(currSamplet2);
+        }
+        float estimated_tempt3 = (0.04431 * (previous_t2s[0]-25) + 0.9519 * (previous_estimated_t3-25))+25;
         previous_estimated_t3 = estimated_tempt3;
         previous_t2s[2] = previous_t2s[1];
         previous_t2s[1] = previous_t2s[0];
@@ -241,7 +244,7 @@ void loop() {
             // et ensuite changer les valeurs ici. Les valeurs ne sont pas directement celles du PI.
             // Vous pouvez regarder mes notes voir s'il n'y a pas une formule qui permet la conversion
             // directe.
-            float control = (previous_control + error * 0.5025f - previous_error * 0.4975f);
+            float control = (previous_control + error * 1.504f - previous_error * 1.496);
             // float control = 0;
             if (control > 2.5f) {
                 control = 2.5f;
@@ -297,6 +300,8 @@ void loop() {
             Serial.print(pwmValue);
             Serial.print(" / ");
             Serial.print(PWM_TOP);
+            Serial.print(" | consigne: ");
+            Serial.print(consigne, 3);
             Serial.print(" | t1: ");
             Serial.print(voltage_to_tempt1(currSamplet1), 3);
             Serial.print(" | t2: ");
@@ -420,7 +425,7 @@ float voltage_to_tempt1(float volt) {
     const float C1 = 0.00000260597012072052;
     const float D1 = 0.000000063292612648746;
     const float RT = 10000.0;
-    volt = volt * 1.6f/4.9f + 1.7f;
+    volt = volt * 0.32709f + 1.65306f;
     float res = 5 * (10000 - 2000 * volt) / volt;
     float logVal = log(RT / res);
     float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
@@ -433,10 +438,10 @@ float voltage_to_tempt3(float volt) {
     const float C1 = 0.00000260597012072052;
     const float D1 = 0.000000063292612648746;
     const float RT = 10000.0;
-    volt = volt * 0.7f/4.9f + 2.2f;
+    volt = volt * 0.1599f + 2.0616f;
     float res = 5 * (10000 - 2000 * volt) / volt;
     float logVal = log(RT / res);
-    float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15;
+    float temp = 1.0 / (A1 + B * logVal + C1 * logVal * logVal + D1 * logVal * logVal * logVal) - 273.15 + 0.48;
     return temp;
 }
 
