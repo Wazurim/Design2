@@ -332,26 +332,26 @@ class CommandPlotWidget(QWidget):
         self.line_u.set_xdata(self.time_values)
         self.line_u.set_ydata(self.u_values)
 
-        all_y = self.u_values
+        #all_y = self.u_values
 
         # y_min, y_max = (0, 0)
 
-        all_y = [x for x in all_y if x is not None]
+        #all_y = [x for x in all_y if x is not None]
         
         # if all_y is not None:
-        y_min, y_max = min(all_y), max(all_y)
+        #y_min, y_max = min(all_y), max(all_y)
 
 
 
-        desired_delta = 100
-        if y_max - y_min < desired_delta:
-            center = (y_max + y_min) / 2
-            y_min = center - desired_delta / 2
-            y_max = center + desired_delta / 2
-            self.ax.set_ylim(y_min, y_max)
+        #desired_delta = 100
+        #if y_max - y_min < desired_delta:
+        #    center = (y_max + y_min) / 2
+        #    y_min = center - desired_delta / 2
+        #    y_max = center + desired_delta / 2
+        #    self.ax.set_ylim(y_min, y_max)
 
-        else:
-            self.ax.autoscale_view()
+        #else:
+        self.ax.autoscale_view()
 
         self.ax.relim()
 
