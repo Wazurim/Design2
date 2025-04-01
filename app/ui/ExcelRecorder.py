@@ -102,7 +102,10 @@ class ExcelRecorder:
 
         # 5) T3 moyen => average of all T3 so far
         self.t3_values.append(t3_val)
-        t3_moy = sum(self.t3_values) / len(self.t3_values)
+        if  len(self.t3_values) > 20:
+            t3_moy = sum(self.t3_values[-20:]) / 20
+        else:
+            t3_moy = sum(self.t3_values) / len(self.t3_values)
 
         # 6) Write row [Time, Consigne, U, T1, T2, T3, T3_est, T4, T3_moy]
         self.sheet.cell(row=self.row_index, column=1).value = temps
