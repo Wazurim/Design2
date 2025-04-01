@@ -177,6 +177,18 @@ class TempPlotWidget(QWidget):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
 
+    def get_moyt3_est(self):
+        
+        if  len(self.t3_values) > 30:
+            t3_moy = sum(self.t3_values[-30:]) / 30
+
+        elif len(self.t3_values) == 0:
+            t3_moy = 0
+        else:
+            t3_moy = sum(self.t3_values) / len(self.t3_values)
+
+        return t3_moy
+
 
     @pyqtSlot(str)
     def parse_and_update(self, line):
@@ -233,16 +245,16 @@ class TempPlotWidget(QWidget):
         y_min, y_max = min(all_y), max(all_y)
 
 
+        self.ax.set_ylim(y_min-1, y_max+1)
 
-        desired_delta = 12
-        if y_max - y_min < desired_delta:
-            center = (y_max + y_min) / 2
-            y_min = center - desired_delta / 2
-            y_max = center + desired_delta / 2
-            self.ax.set_ylim(y_min, y_max)
+        # desired_delta = 12
+        # if y_max - y_min < desired_delta:
+        #     center = (y_max + y_min) / 2
+        #     y_min = center - desired_delta / 2
+        #     y_max = center + desired_delta / 2
 
-        else:
-            self.ax.autoscale_view()
+        # else:
+        #     self.ax.autoscale_view()
 
         # Update lines
         self.line_consigne.set_xdata(self.time_values)
@@ -695,7 +707,7 @@ class SerialMonitor(QWidget):
 
 def main():
     app = QApplication(sys.argv)
-    window = SerialMonitor(port="COM6", baudrate=115200)
+    window = SerialMonitor(port="COM9", baudrate=115200)
 
     screen = app.primaryScreen().availableGeometry()
     w = int(screen.width() * 0.95)
