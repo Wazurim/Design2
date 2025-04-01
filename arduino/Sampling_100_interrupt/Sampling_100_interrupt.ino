@@ -268,7 +268,7 @@ void loop() {
             float d = D;
             float f = F;
 
-            float control = (error * (p + p * f / 2 + i / 2 + d * f) + previous_error * (i / 2 - d * f) + previous_control *  (1 - f/2))/(1 + f/2);
+            // float control = (error * (p + p * f / 2 + i / 2 + d * f) + previous_error * (i / 2 - d * f) + previous_control *  (1 - f/2))/(1 + f/2);
             // if (error < 0.3 && error > -0.3) {
             //   // isFirstPI = false;
             //   time_counter++;
@@ -278,7 +278,9 @@ void loop() {
             // }
 
             // if (time_counter > 60) {
-            //   control = (previous_control + error * 0.53245 - previous_error * 0.52755);
+            // float control = (previous_control + error * 0.53245 - previous_error * 0.52755);
+            float control = (previous_control + error * (i/2 + p) + previous_error * (i/2-p));
+
             // }
 
             // float control = 0;

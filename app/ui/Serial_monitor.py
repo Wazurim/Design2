@@ -458,21 +458,23 @@ class SerialMonitor(QWidget):
         param_layout.addWidget(self.input_con)
 
         param_layout.addWidget(QLabel("P:"))
-        self.input_p = QLineEdit("4.9931")
+        self.input_p = QLineEdit("0.53")
         param_layout.addWidget(self.input_p)
 
         param_layout.addWidget(QLabel("I:"))
-        self.input_i = QLineEdit("0.008689")
+        self.input_i = QLineEdit("0.0049")
         param_layout.addWidget(self.input_i)
 
         param_layout.addWidget(QLabel("D:"))
         self.input_d = QLineEdit("48.2037")
         param_layout.addWidget(self.input_d)
+        self.input_d.setEnabled(False)
 
         param_layout.addWidget(QLabel("F:"))
         self.input_f = QLineEdit("4.964471")
         param_layout.addWidget(self.input_f)
         control_layout.addLayout(param_layout)
+        self.input_f.setEnabled(False)
 
 
         self.lbl_precision = QLabel("Precision: unknown")
