@@ -6,6 +6,7 @@ import serial
 import threading
 from datetime import datetime
 
+import statistics
 import matplotlib
 matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt
@@ -583,15 +584,15 @@ class SerialMonitor(QWidget):
 
         if len(self.temp_plot.t3_est_values) > 20:
             last_values_t3_est = self.temp_plot.t3_est_values[-20:]
-            diff = max(last_values_t3_est) -min(last_values_t3_est)
+            stdev = statistics.stdev(last_values_t3_est)
 
-            if diff < 0.1:
+            if stdev < 0.1:
                 self.lbl_stabilite.setText(f"Stabilite: Stable, ecart < 0.1 depuis plus de 20 secondes :)")
                 self.lbl_stabilite.setStyleSheet("color: green;")
                 self.in_stable_zone = True
 
             else:
-                self.lbl_stabilite.setText(f"Stabilite: instable :(   Ecart: {diff}")   
+                self.lbl_stabilite.setText(f"Stabilite: instable :(   Ecart: {stdev}")   
                 self.lbl_stabilite.setStyleSheet("color: red;")
                 self.in_stable_zone = False
                 self.time_counting = False
@@ -604,7 +605,7 @@ class SerialMonitor(QWidget):
                
 
         if self.in_stable_zone and self.in_precise_zone and not self.time_counting:
-            self.enter_time = now - 20
+            self.enter_time = now
             self.lbl_timer.setStyleSheet("color: green;")
             self.time_counting = True
             
@@ -612,7 +613,7 @@ class SerialMonitor(QWidget):
             elapsed = now - self.enter_time
             self.lbl_timer.setText(f"In zones :) : elapsed: {elapsed}")
         else:
-            self.enter_time = now + 20
+            self.enter_time = now 
             self.lbl_timer.setStyleSheet("color: red;")
             self.lbl_timer.setText(f"N/A")
 
@@ -717,7 +718,7 @@ class SerialMonitor(QWidget):
 
 def main():
     app = QApplication(sys.argv)
-    window = SerialMonitor(port="COM9", baudrate=115200)
+    window = SerialMonitor(port="COM6", baudrate=115200)
 
     screen = app.primaryScreen().availableGeometry()
     w = int(screen.width() * 0.95)
