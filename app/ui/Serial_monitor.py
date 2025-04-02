@@ -171,7 +171,7 @@ class TempPlotWidget(QWidget):
         self.ax.set_ylabel("Temperature (°C)")
         self.ax.set_title("Real-Time Temps + T3_est")
         self.ax.grid(True)
-        self.ax.legend(loc="lower left")
+        self.ax.legend(loc="lower left", fontsize=12)
 
 
         layout = QVBoxLayout()
@@ -318,7 +318,7 @@ class CommandPlotWidget(QWidget):
         self.ax.set_ylabel("Command U (%)")
         self.ax.set_title("Real-Time Command U")
         self.ax.grid(True)
-        self.ax.legend(loc="lower left")
+        self.ax.legend(loc="lower left", fontsize=12)
 
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
