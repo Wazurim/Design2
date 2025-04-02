@@ -71,7 +71,7 @@ class ExcelRecorder:
         duty_val = float(pwm_m.group(1))
         duty_max = float(pwm_m.group(2))
         fraction = duty_val / duty_max if duty_max else 0.0
-        U = fraction * 10.0 - 5.0
+        U = -fraction * 200 + 100
 
         mt1 = self.regex_t1.search(line)
         mt2 = self.regex_t2.search(line)

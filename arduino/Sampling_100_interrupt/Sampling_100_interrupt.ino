@@ -391,6 +391,7 @@ void handleLine(const String &line) {
         Serial.println("Control loop OFF");
     } else if (line.equalsIgnoreCase("R")) {
         running = false;
+        previousControl = 0;
         Time = CurrentTime + Time;
         CurrentTime = 0;
 
