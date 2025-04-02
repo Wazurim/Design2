@@ -164,14 +164,15 @@ class TempPlotWidget(QWidget):
         self.line_t1,     = self.ax.plot([], [], label="T1")
         self.line_t2,     = self.ax.plot([], [], label="T2")
         self.line_t3,     = self.ax.plot([], [], label="T3")
-        self.line_t4,     = self.ax.plot([], [], label="T4")
+        #self.line_t4,     = self.ax.plot([], [], label="T4")
         self.line_t3_est, = self.ax.plot([], [], label="T3_est")
 
         self.ax.set_xlabel("Time (s)")
         self.ax.set_ylabel("Temperature (°C)")
         self.ax.set_title("Real-Time Temps + T3_est")
         self.ax.grid(True)
-        self.ax.legend()
+        self.ax.legend(loc="lower left")
+
 
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
@@ -284,14 +285,14 @@ class TempPlotWidget(QWidget):
         self.t1_values.clear()
         self.t2_values.clear()
         self.t3_values.clear()
-        self.t4_values.clear()
+        #self.t4_values.clear()
         self.t3_est_values.clear()
 
         self.line_consigne.set_data([], [])
         self.line_t1.set_data([], [])
         self.line_t2.set_data([], [])
         self.line_t3.set_data([], [])
-        self.line_t4.set_data([], [])
+        #self.line_t4.set_data([], [])
         self.line_t3_est.set_data([], [])
 
         self.ax.relim()
@@ -317,7 +318,7 @@ class CommandPlotWidget(QWidget):
         self.ax.set_ylabel("Command U (%)")
         self.ax.set_title("Real-Time Command U")
         self.ax.grid(True)
-        self.ax.legend()
+        self.ax.legend(loc="lower left")
 
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
