@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QPlainTextEdit
@@ -391,6 +391,8 @@ class SerialMonitor(QWidget):
         super().__init__(parent)
         self.setWindowTitle("Design 2 Prototype serial monitor")
         self.setWindowIcon(QIcon("icon.png"))
+        self.setFont(QFont("Arial", 12))
+
 
         self.data_dir = os.path.join(os.getcwd(), "data")
         os.makedirs(self.data_dir, exist_ok=True)
@@ -435,10 +437,12 @@ class SerialMonitor(QWidget):
         self.btn_play = QPushButton("Play")
         self.btn_play.setStyleSheet("background-color: white; color: black;")
         self.btn_play.setText("Send and play")
+        self.btn_play.setFont(QFont("Arial", 12))
         self.btn_stop = QPushButton("Stop")
         self.btn_reset = QPushButton("Reset")
         self.btn_record = QPushButton("Start Recording")
         self.btn_record.setStyleSheet("background-color: green; color: white;")
+        self.btn_record.setFont(QFont("Arial", 12))
 
         btn_layout.addWidget(self.btn_play)
         btn_layout.addWidget(self.btn_stop)
@@ -479,14 +483,17 @@ class SerialMonitor(QWidget):
 
         self.lbl_precision = QLabel("Precision: unknown")
         self.lbl_precision.setStyleSheet("color: red;")
+        self.lbl_precision.setFont(QFont("Arial", 12))
         control_layout.addWidget(self.lbl_precision)
 
         self.lbl_stabilite = QLabel("Stability: unknown")
         self.lbl_stabilite.setStyleSheet("color: red;")
+        self.lbl_stabilite.setFont(QFont("Arial", 12))
         control_layout.addWidget(self.lbl_stabilite)
 
         self.lbl_timer = QLabel("N/A")
         self.lbl_timer.setStyleSheet("color: red;")
+        self.lbl_timer.setFont(QFont("Arial", 12))
         control_layout.addWidget(self.lbl_timer)
         # Raw command
         # = QHBoxLayout()
