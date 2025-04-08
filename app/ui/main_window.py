@@ -55,6 +55,7 @@ class MainWindow(QWidget):
         add_input("Position thermistance 3 [(X, Y)]:", 16, "zone_positions_thermistance_3", "(X, Y)")
         add_input("Start heat time [s]:", 17, "zone_start_heat_time", "-1.0")
         add_input("Stop heat time [s]:", 18, "zone_stop_heat_time", "-1.0")
+        add_input("step time [s]:", 19, "zone_step_time", "-1.0")
 
         # === Save Button ===
         self.save_btn = QPushButton("Save to Json")

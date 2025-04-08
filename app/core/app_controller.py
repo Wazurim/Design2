@@ -71,7 +71,8 @@ class AppController:
                 "Position thermistance 2 [(X, Y)]:": ui.zone_positions_thermistance_2.toPlainText(),
                 "Position thermistance 3 [(X, Y)]:": ui.zone_positions_thermistance_3.toPlainText(),
                 "Start heat time [s]:": ui.zone_start_heat_time.toPlainText(),
-                "Stop heat time [s]:": ui.zone_stop_heat_time.toPlainText()
+                "Stop heat time [s]:": ui.zone_stop_heat_time.toPlainText(),
+                "step time [s]:": ui.zone_step_time.toPlainText()
             }
         }
 
@@ -111,6 +112,7 @@ class AppController:
                 ui.zone_positions_thermistance_3.setPlainText(str(p.get("Position thermistance 3 [(X, Y)]:", "")))
                 ui.zone_start_heat_time.setPlainText(str(p.get("Start heat time [s]:", "")))
                 ui.zone_stop_heat_time.setPlainText(str(p.get("Stop heat time [s]:", "")))
+                ui.zone_step_time.setPlainText(str(p.get("step time [s]:", "")))
 
         except Exception as e:
             print(f"[CRITICAL] Failed to load params: {e}")
@@ -165,7 +167,7 @@ class AppController:
             self.main_window.set_secondary_layout()
 
 
-            self.canvas = PlateCanvas()
+            self.canvas = PlateCanvas(step_sim_time=float(p["step time [s]:"]))
             self.main_window.layout().addWidget(self.canvas)
             self.canvas.start_simulation(plate)
             print()

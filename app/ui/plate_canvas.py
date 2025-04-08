@@ -5,7 +5,7 @@ from matplotlib.figure import Figure
 from matplotlib import cm
 
 class PlateCanvas(FigureCanvas):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, step_sim_time = 0.1):
         self.fig = Figure(figsize=(10, 5))
         self.ax2d_heatmap = self.fig.add_subplot(221)
         self.ax2d1 = self.fig.add_subplot(222)
@@ -13,6 +13,7 @@ class PlateCanvas(FigureCanvas):
         self.ax2d3 = self.fig.add_subplot(224)
         self.fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1,
                                  wspace=0.4, hspace=0.4)
+        self.step_sim_time = step_sim_time 
 
         super().__init__(self.fig)
         self.setParent(parent)
@@ -35,8 +36,7 @@ class PlateCanvas(FigureCanvas):
         self.timer.start(100)
 
     def update_plot(self):
-        step_sim_time = 0.1
-        steps = int(step_sim_time / self.plate.dt)
+        steps = int(self.step_sim_time / self.plate.dt)
         for _ in range(steps):
             self.plate.update_plate_with_numpy()
 
