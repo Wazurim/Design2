@@ -11,13 +11,13 @@
         "Convection Coeff [W/m2K]:": "13.5",
         "Amperage Input [A]:": "-0.824",
         "Power transfert :": "-1.3",
-        "Ambient Temp [\u00b0C]:": "23.8",
+        "Ambient Temp [\u00b0C]:": "24",
         "Initial Temp [\u00b0C]:": "0",
         "Position heat source [(X, Y)]:": "(16, 31)",
         "Position thermistance 1 [(X, Y)]:": "(16, 31)",
         "Position thermistance 2 [(X, Y)]:": "(61, 31)",
         "Position thermistance 3 [(X, Y)]:": "(106, 31)",
-        "Start heat time [s]:": "10",
+        "Start heat time [s]:": "5",
         "Stop heat time [s]:": "30"
     }
 }
