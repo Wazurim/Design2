@@ -53,7 +53,7 @@ class Plate:#117.21, 61.6
         self.X, self.Y = np.meshgrid(y, x)
 
         # Power input
-        self.power_in = amp_in * -power_transfer  # Power [W]
+        self.power_in = amp_in * power_transfer  # Power [W]
         self.power_perturbation = perturbation
         self.pert_location = (round(position_perturbation[1]/(self.dy*1000)), round(position_perturbation[0]/(self.dx*1000)))
         self.p_in_location = (round(position_heat_source[1]/(self.dy*1000)), round(position_heat_source[0]/(self.dx*1000)))
