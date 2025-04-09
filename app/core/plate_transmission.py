@@ -52,8 +52,10 @@ class Plate:#117.21, 61.6
         self.X, self.Y = np.meshgrid(y, x)
 
         # Power input
-        self.power_in = amp_in * power_transfer  # Power [W]
-        self.p_in_location = position_heat_source  # Location of power input (quarter of the length)
+        self.power_in = amp_in * -power_transfer  # Power [W]
+        self.p_in_location = (round(position_heat_source[1]/(self.dy*1000)), round(position_heat_source[0]/(self.dx*1000)))
+        #self.p_in_location = position_heat_source
+        print(self.p_in_location)  # Location of power input (quarter of the length)
         self.powers = np.zeros([self.nx, self.ny])
         self.powers[self.p_in_location] = self.power_in  # Power applied to one element
         self.start_heat_time = start_heat_time

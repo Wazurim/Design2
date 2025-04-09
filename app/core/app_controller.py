@@ -143,8 +143,8 @@ class AppController:
             p = self.__fetch_params()["plate"]
             plate = Plate(
                 total_time=float(p["Total Time [s]:"]),
-                lx=float(p["Length Y [mm]:"])/1000,
-                ly=float(p["Length X [mm]:"])/1000,
+                ly=float(p["Length Y [mm]:"])/1000,
+                lx=float(p["Length X [mm]:"])/1000,
                 thickness=float(p["Thickness [mm]:"])/1000,
                 n=int(p["N:"]),
                 k=float(p["Thermal Conductivity [W/mK]:"]),

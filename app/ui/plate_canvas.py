@@ -81,9 +81,15 @@ class PlateCanvas(FigureCanvas):
 
         # Log the three thermistor temps
         self.times.append(self.plate.current_time)
-        t1 = self.plate.temps[self.plate.thermistances_positions[0]] - 273
-        t2 = self.plate.temps[self.plate.thermistances_positions[1]] - 273
-        t3 = self.plate.temps[self.plate.thermistances_positions[2]] - 273
+        post1 = (round(self.plate.thermistances_positions[0][1] / (1000*self.plate.dy)), round(self.plate.thermistances_positions[0][0] / (1000*self.plate.dx)))
+        post2 = (round(self.plate.thermistances_positions[1][1] / (1000*self.plate.dy)), round(self.plate.thermistances_positions[1][0] / (1000*self.plate.dx)))
+        post3 = (round(self.plate.thermistances_positions[2][1] / (1000*self.plate.dy)), round(self.plate.thermistances_positions[2][0] / (1000*self.plate.dx)))
+        print(f"Postion 1: {post1}, Postion 2: {post2}, Postion 3: {post3}")
+
+
+        t1 = self.plate.temps[post1] - 273
+        t2 = self.plate.temps[post2] - 273
+        t3 = self.plate.temps[post3] - 273
         self.thermistor_temps1.append(t1)
         self.thermistor_temps2.append(t2)
         self.thermistor_temps3.append(t3)
