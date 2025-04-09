@@ -5,7 +5,7 @@ class Plate:#117.21, 61.6
     def __init__(self, total_time=500, lx=116.44e-3, ly=61.68e-3, thickness=1.82e-3, n=117, k=350, rho=2333,
                  cp=896, h_convection=13.5, amp_in=-0.824, power_transfer=-1.3, ambient_temp=23.8, initial_plate_temp=0,
                  position_heat_source=(16, 31), positions_thermistances=[(16, 31), (61, 31), (106, 31)],
-                 start_heat_time=10, stop_heat_time=1027):
+                 start_heat_time=10, stop_heat_time=1027, perturbation =0, position_perturbation=(30, 31), start_perturbation=0, stop_perturbation=1027):
         #TODO: make positions change according to lx, ly not n
 
         # Parameters
@@ -13,7 +13,8 @@ class Plate:#117.21, 61.6
         self.lx = lx  # Length [m]
         self.ly = ly  # Width  [m]
         self.thickness = thickness  # Thickness [m]
-
+        self.current_power = 0.0
+        self.current_pert = 0.0
         self.nx = n  # Number of elements in x
         self.ny = round((ly * n)/lx) # Number of elements in y should be proportional to number of elements in x
 
@@ -53,13 +54,18 @@ class Plate:#117.21, 61.6
 
         # Power input
         self.power_in = amp_in * -power_transfer  # Power [W]
+        self.power_perturbation = perturbation
+        self.pert_location = (round(position_perturbation[1]/(self.dy*1000)), round(position_perturbation[0]/(self.dx*1000)))
         self.p_in_location = (round(position_heat_source[1]/(self.dy*1000)), round(position_heat_source[0]/(self.dx*1000)))
         #self.p_in_location = position_heat_source
-        print(self.p_in_location)  # Location of power input (quarter of the length)
         self.powers = np.zeros([self.nx, self.ny])
         self.powers[self.p_in_location] = self.power_in  # Power applied to one element
+        self.powers_pert = np.zeros([self.nx, self.ny])
+        self.powers_pert[self.pert_location] = self.power_perturbation  # Power applied to one element
         self.start_heat_time = start_heat_time
         self.stop_heat_time = stop_heat_time
+        self.start_pert = start_perturbation
+        self.stop_pert = stop_perturbation
 
         # Initial conditions
         self.ambient_temp = 273.0 + ambient_temp  # Ambient temperature [K]
@@ -91,7 +97,15 @@ class Plate:#117.21, 61.6
         # Apply power term if it's time to heat up
         if (self.current_time >= self.start_heat_time and self.current_time < self.stop_heat_time):
             self.new_temps += self.dt / (self.rho * self.cp) * self.powers / self.volume
-        
+            self.current_power = float(self.power_in)
+        else:
+            self.current_power = 0.0
+
+        if (self.current_time >= self.start_pert  and self.current_time < self.stop_pert):
+            self.new_temps += self.dt / (self.rho * self.cp) * self.powers_pert / self.volume
+            self.current_pert = float(self.power_perturbation)
+        else:
+            self.current_pert = 0.0
         # Boundary handling manually to avoid wrapping from np.roll
         self.new_temps[0, :] += self.dt_conv * (self.ambient_temp - self.temps[0, :]) * self.area_sides / self.volume
         self.new_temps[-1, :] += self.dt_conv * (self.ambient_temp - self.temps[-1, :]) * self.area_sides / self.volume
