@@ -9,10 +9,10 @@ import numpy as np
 class PlateCanvas(FigureCanvas):
     def __init__(self, step_sim_time, parent=None):
         self.fig = Figure(figsize=(10, 5))
-        self.ax_heat = self.fig.add_subplot(221)
-        self.ax_t1   = self.fig.add_subplot(222)
-        self.ax_t2   = self.fig.add_subplot(223)
-        self.ax_t3   = self.fig.add_subplot(224)
+        self.ax_heat = self.fig.add_subplot(121)
+        self.ax_t1   = self.fig.add_subplot(122)
+        #self.ax_t2   = self.fig.add_subplot(223)
+        #self.ax_t3   = self.fig.add_subplot(224)
         self.fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1,
                                  wspace=0.4, hspace=0.4)
         super().__init__(self.fig)
@@ -31,9 +31,9 @@ class PlateCanvas(FigureCanvas):
         self.times, self.power, self.perturbation, self.t1, self.t2, self.t3 = [], [], [], [], [], []
 
         # cheap timer just to refresh the figure
-        self._redraw_timer = QTimer(self)
-        self._redraw_timer.timeout.connect(self._redraw)
-        self._redraw_timer.start(int(step_sim_time * 1000))
+        #self._redraw_timer = QTimer(self)
+        #self._redraw_timer.timeout.connect(self._redraw)
+        #self._redraw_timer.start(int(step_sim_time *1000))
 
     # called once from controller after worker is built
     def bind(self, worker, plate):
@@ -43,7 +43,7 @@ class PlateCanvas(FigureCanvas):
 
         # pre‑compute thermistor indices (mm → matrix)
         self.therm_idx = [
-            (round(y / (1e3*plate.dy)), round(x / (1e3*plate.dx)))
+            (round(x / (1e3*plate.dx)), round(y / (1e3*plate.dy)))
             for (x, y) in plate.thermistances_positions
         ]
 
@@ -67,7 +67,7 @@ class PlateCanvas(FigureCanvas):
         self.t3.append(self.latest_temps[i3,j3])
         self.power.append(current_power)
         self.perturbation.append(current_pert)
-
+        self._redraw()
 
     # paint everything
     def _redraw(self):
@@ -96,16 +96,19 @@ class PlateCanvas(FigureCanvas):
             self.cb.update_normal(im)
 
         # --- traces ---
-        for ax, data, title in [
-            (self.ax_t1, self.t1, "Thermistor 1"),
-            (self.ax_t2, self.t2, "Thermistor 2"),
-            (self.ax_t3, self.t3, "Thermistor 3")
-        ]:
-            ax.clear()
-            ax.plot(self.times, data, 'r-')
-            ax.set_title(title)
-            ax.set_xlabel("Time [s]")
-            ax.set_ylabel("Temp [°C]")
-            ax.grid(True)
+        #for ax, data, title in [
+#            (self.ax_t1, self.t1, "Thermistor 1"),
+ #           (self.ax_t1, self.t2, "Thermistor 2"),
+  #          (self.ax_t1, self.t3, "Thermistor 3")
+   #     ]:
+        self.ax_t1.clear()
+        #ax.plot(self.times, data, 'r-')
+        self.ax_t1.plot(self.times, self.t1, 'b-')
+        self.ax_t1.plot(self.times, self.t2, 'y-')
+        self.ax_t1.plot(self.times, self.t3, 'r-')
+        self.ax_t1.set_title("Thermistor")
+        self.ax_t1.set_xlabel("Time [s]")
+        self.ax_t1.set_ylabel("Temp [°C]")
+        self.ax_t1.grid(True)
 
         self.draw()
