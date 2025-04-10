@@ -1,5 +1,6 @@
 # app/core/app_controller.py
-
+import numpy as np
+from datetime import datetime
 import os, sys, ast
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QApplication
 from PyQt5.QtCore import QTimer
@@ -9,6 +10,7 @@ from app.core.JSON_Handler import JsonHandler
 from app.core.plate_transmission import Plate
 from app.ui.plate_canvas import PlateCanvas
 
+ 
 
 class AppController:
     def __init__(self):
@@ -17,6 +19,7 @@ class AppController:
         self.json_handler = JsonHandler()
         self.config_dir = "app/Configs"
         self.canvas = None
+        self.working = False
         self.cwd = os.getcwd()
         screen = self.app.primaryScreen()
         available_rect = screen.availableGeometry()
@@ -72,7 +75,11 @@ class AppController:
                 "Position thermistance 3 [(X, Y)]:": ui.zone_positions_thermistance_3.toPlainText(),
                 "Start heat time [s]:": ui.zone_start_heat_time.toPlainText(),
                 "Stop heat time [s]:": ui.zone_stop_heat_time.toPlainText(),
-                "step time [s]:": ui.zone_step_time.toPlainText()
+                "step time [s]:": ui.zone_step_time.toPlainText(),
+                "Start perturbation time [s]:": ui.zone_start_perturbation_time.toPlainText(),
+                "Stop perturbation time [s]:": ui.zone_stop_perturbation_time.toPlainText(),
+                "Position perturbation [(X, Y)]:": ui.zone_position_perturbation.toPlainText(),
+                "Perturbation [W]:": ui.zone_power_perturbation.toPlainText()
             }
         }
 
@@ -113,6 +120,10 @@ class AppController:
                 ui.zone_start_heat_time.setPlainText(str(p.get("Start heat time [s]:", "")))
                 ui.zone_stop_heat_time.setPlainText(str(p.get("Stop heat time [s]:", "")))
                 ui.zone_step_time.setPlainText(str(p.get("step time [s]:", "")))
+                ui.zone_start_perturbation_time.setPlainText(str(p.get("Start perturbation time [s]:", "")))
+                ui.zone_stop_perturbation_time.setPlainText(str(p.get("Stop perturbation time [s]:", "")))
+                ui.zone_position_perturbation.setPlainText(str(p.get("Position perturbation [(X, Y)]:", "")))
+                ui.zone_power_perturbation.setPlainText(str(p.get("Perturbation [W]:", "")))
 
         except Exception as e:
             print(f"[CRITICAL] Failed to load params: {e}")
@@ -156,11 +167,19 @@ class AppController:
                 ambient_temp=float(p["Ambient Temp [°C]:"]),
                 initial_plate_temp=float(p["Initial Temp [°C]:"]),
                 position_heat_source=ast.literal_eval(p["Position heat source [(X, Y)]:"]),
-                positions_thermistances=[ast.literal_eval(s) for s in ( p["Position thermistance 1 [(X, Y)]:"], p["Position thermistance 2 [(X, Y)]:"], p["Position thermistance 3 [(X, Y)]:"])],
+                positions_thermistances=[
+                    ast.literal_eval(p["Position thermistance 1 [(X, Y)]:"]),
+                    ast.literal_eval(p["Position thermistance 2 [(X, Y)]:"]),
+                    ast.literal_eval(p["Position thermistance 3 [(X, Y)]:"])
+                ],
                 start_heat_time=float(p["Start heat time [s]:"]),
-                stop_heat_time=float(p["Stop heat time [s]:"])
+                stop_heat_time=float(p["Stop heat time [s]:"]),
+                start_perturbation=float(p["Start perturbation time [s]:"]),
+                stop_perturbation=float(p["Stop perturbation time [s]:"]),
+                position_perturbation=ast.literal_eval(p["Position perturbation [(X, Y)]:"]),
+                perturbation=float(p["Perturbation [W]:"])
             )
-
+            
             if self.canvas:
                 self.main_window.layout().removeWidget(self.canvas)
                 self.canvas.setParent(None)
@@ -170,7 +189,41 @@ class AppController:
             self.canvas = PlateCanvas(step_sim_time=float(p["step time [s]:"]))
             self.main_window.layout().addWidget(self.canvas)
             self.canvas.start_simulation(plate)
-            print()
+            self.working = True
 
         except Exception as e:
             QMessageBox.critical(None, "Error", f"Failed to start simulation:\n{e}")
+
+    def stop(self):
+        try:
+            self.working = False
+            times = [x for x in self.canvas.times]
+            power = self.canvas.power
+            pert = self.canvas.perturbation
+            t1 = [x for x in self.canvas.t1]
+            t2 = [x for x in self.canvas.t2]
+            t3 = [x for x in self.canvas.t3]
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            new_file = os.path.join(os.getcwd(), f"Data/sim_data_{timestamp}.txt")
+            np.savetxt(new_file, np.transpose([times, power, pert, t1, t2, t3]))
+            
+        except Exception as e:
+                QMessageBox.critical(None, "Error", f"Failed to save data:\n{e}")
+                print("times:", times,"power:", power, "perturbation:", pert, "t1:", t1,"t2:", t2, "t3:", t3)
+
+    def quit(self):
+        try:
+            times = [x for x in self.canvas.times]
+            power = self.canvas.power
+            pert = self.canvas.perturbation
+            t1 = [x for x in self.canvas.t1]
+            t2 = [x for x in self.canvas.t2]
+            t3 = [x for x in self.canvas.t3]
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            new_file = os.path.join(os.getcwd(), f"Data/sim_data_{timestamp}.txt")
+            np.savetxt(new_file, np.transpose([times, power, pert, t1, t2, t3]))
+                
+        except Exception as e:
+                QMessageBox.critical(None, "Error", f"Failed to save data:\n{e}")
+                print("times:", times,"power:", power, "perturbation:", pert, "t1:", t1,"t2:", t2, "t3:", t3)
+        self.app.quit()

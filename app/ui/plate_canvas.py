@@ -3,6 +3,7 @@ from PyQt5.QtCore import QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib import cm
+import numpy as np
 
 class PlateCanvas(FigureCanvas):
     def __init__(self, parent=None, step_sim_time=0.5):
@@ -27,9 +28,12 @@ class PlateCanvas(FigureCanvas):
     def start_simulation(self, plate):
         self.plate = plate
         self.times = []
-        self.thermistor_temps1 = []
-        self.thermistor_temps2 = []
-        self.thermistor_temps3 = []
+        self.t1 = []
+        self.t2 = []
+        self.t3 = []
+        self.power = []
+        self.perturbation = []
+
         self.timer.start(1)
 
         self.ax3d.set_xlim(0, 120)
@@ -73,14 +77,16 @@ class PlateCanvas(FigureCanvas):
         t3 = self.plate.temps[post3] - 273
 
         self.times.append(self.plate.current_time)
-        self.thermistor_temps1.append(t1)
-        self.thermistor_temps2.append(t2)
-        self.thermistor_temps3.append(t3)
+        self.t1.append(t1)
+        self.t2.append(t2)
+        self.t3.append(t3)
+        self.power.append(self.plate.current_power)
+        self.perturbation.append(self.plate.current_pert)
 
         self.ax2d1.clear()
-        self.ax2d1.plot(self.times, self.thermistor_temps1, color='b', label="Thermistor 1")
-        self.ax2d1.plot(self.times, self.thermistor_temps2, color='y', label="Thermistor 2")
-        self.ax2d1.plot(self.times, self.thermistor_temps3, color='r', label="Thermistor 3")
+        self.ax2d1.plot(self.times, self.t1, color='b', label="Thermistor 1")
+        self.ax2d1.plot(self.times, self.t2, color='y', label="Thermistor 2")
+        self.ax2d1.plot(self.times, self.t3, color='r', label="Thermistor 3")
         self.ax2d1.set_title("Thermistences")
         self.ax2d1.set_xlabel("Temps[s]")
         self.ax2d1.set_ylabel("Temp [°C]")

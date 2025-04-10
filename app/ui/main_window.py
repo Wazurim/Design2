@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPlainTextEdit,
-    QPushButton, QComboBox, QSizePolicy
+    QPushButton, QComboBox, QSizePolicy, QMessageBox
 )
 from PyQt5.QtCore import Qt
 
@@ -56,6 +56,10 @@ class MainWindow(QWidget):
         add_input("Start heat time [s]:", 17, "zone_start_heat_time", "-1.0")
         add_input("Stop heat time [s]:", 18, "zone_stop_heat_time", "-1.0")
         add_input("step time [s]:", 19, "zone_step_time", "-1.0")
+        add_input("Start perturbation time [s]:", 20, "zone_start_perturbation_time", "-1.0")
+        add_input("Stop perturbation time [s]:", 21, "zone_stop_perturbation_time", "-1.0")
+        add_input("Position perturbation [(X, Y)]:", 22, "zone_position_perturbation", "(X, Y)")
+        add_input("Perturbation [W]:", 23, "zone_power_perturbation", "-1.0")
 
         # === Save Button ===
         self.save_btn = QPushButton("Save to Json")
@@ -71,6 +75,10 @@ class MainWindow(QWidget):
         self.sim_canvas_container = QVBoxLayout()
         self.second_layout.addLayout(self.sim_canvas_container)
 
+        self.stop_btn = QPushButton("Stop Simulation")
+        self.stop_btn.clicked.connect(self.controller.stop)
+        self.second_layout.addWidget(self.stop_btn)
+
     def set_secondary_layout(self):
         self.main_layout = self.layout()
         if self.main_layout is not None:
@@ -83,3 +91,27 @@ class MainWindow(QWidget):
             QWidget().setLayout(self.main_layout)
 
         self.setLayout(self.second_layout)
+
+    def closeEvent(self, event):
+        # 2) if data changed, prompt the user      # your own flag / method
+        reply = QMessageBox.question(
+            self,
+            "Quit",
+            "Save your work before quitting?",
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+            QMessageBox.Yes
+        )
+        
+        if reply == QMessageBox.Cancel:
+            event.ignore()                # keep the app open
+            return
+        if reply == QMessageBox.Yes:
+            try:
+                self.controller.quit()   # your own save routine
+            except Exception as e:
+                QMessageBox.critical(self, "Save failed", str(e))
+                event.ignore()
+                return
+
+        # 3) let Qt proceed with shutdown
+        event.accept()
