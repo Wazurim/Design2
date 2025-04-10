@@ -1,5 +1,5 @@
 % Paramètres
-nom_fichier = "essaie2_temp.txt";
+nom_fichier = "identification_perturbation.csv";
 ordre = 2;  % Nombre de pôles et de zéros
 delai_max = 10; % Temps de retard maximal estimé (nombre d'échantillons)
 

@@ -718,7 +718,7 @@ class SerialMonitor(QWidget):
 
 def main():
     app = QApplication(sys.argv)
-    window = SerialMonitor(port="COM6", baudrate=115200)
+    window = SerialMonitor(port="COM3", baudrate=115200)
 
     screen = app.primaryScreen().availableGeometry()
     w = int(screen.width() * 0.95)
