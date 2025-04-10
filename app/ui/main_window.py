@@ -46,7 +46,7 @@ class MainWindow(QWidget):
         add_input("Heat Capacity [J/kgK]:", 7, "zone_cp", "896")
         add_input("Convection Coeff [W/m2K]:", 8, "zone_h", "13.5")
         add_input("Amperage Input [A]:", 9, "zone_amp_in", "-1.0")
-        add_input("Power transfert :", 10, "zone_power_transfert", "-1.0")
+        add_input("Power transfert [W/A] :", 10, "zone_power_transfert", "-1.0")
         add_input("Ambient Temp [°C]:", 11, "zone_ambient_temp", "23.8")
         add_input("Initial Temp [°C]:", 12, "zone_initial_temp", "0")
         add_input("Position heat source [(X, Y)]:", 13, "zone_position_heat_source", "(X, Y)")
@@ -55,6 +55,7 @@ class MainWindow(QWidget):
         add_input("Position thermistance 3 [(X, Y)]:", 16, "zone_positions_thermistance_3", "(X, Y)")
         add_input("Start heat time [s]:", 17, "zone_start_heat_time", "-1.0")
         add_input("Stop heat time [s]:", 18, "zone_stop_heat_time", "-1.0")
+        add_input("step time [s]:", 19, "zone_step_time", "-1.0")
 
         # === Save Button ===
         self.save_btn = QPushButton("Save to Json")

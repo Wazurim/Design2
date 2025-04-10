@@ -17,7 +17,8 @@
         "Position thermistance 1 [(X, Y)]:": "(16, 31)",
         "Position thermistance 2 [(X, Y)]:": "(61, 31)",
         "Position thermistance 3 [(X, Y)]:": "(106, 31)",
-        "Start heat time [s]:": "10",
-        "Stop heat time [s]:": "30"
+        "Start heat time [s]:": "2",
+        "Stop heat time [s]:": "30",
+        "step time [s]:": "0.1"
     }
 }
