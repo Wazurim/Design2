@@ -9,7 +9,7 @@ class PlateCanvas(FigureCanvas):
     def __init__(self, parent=None, step_sim_time=0.5):
         self.fig = Figure(figsize=(10, 5))
         self.ax3d = self.fig.add_subplot(121, projection='3d')
-
+        self.working = False
         self.step_sim_time = step_sim_time 
         self.ax2d1 = self.fig.add_subplot(122)
         #self.ax2d2 = self.fig.add_subplot(223)
@@ -26,6 +26,7 @@ class PlateCanvas(FigureCanvas):
         self.timer.timeout.connect(self.update_plot)
 
     def start_simulation(self, plate):
+
         self.plate = plate
         self.times = []
         self.t1 = []
@@ -46,6 +47,10 @@ class PlateCanvas(FigureCanvas):
         self.fig.canvas.draw_idle()   
 
     def update_plot(self):
+        if self.working == False:
+            self.timer.timeout.disconnect(self.update_plot)
+            return
+
         steps = int(self.step_sim_time / self.plate.dt)
         for _ in range(steps):
             self.plate.update_plate_with_numpy()

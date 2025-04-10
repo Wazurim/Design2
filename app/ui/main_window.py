@@ -93,25 +93,25 @@ class MainWindow(QWidget):
         self.setLayout(self.second_layout)
 
     def closeEvent(self, event):
-        # 2) if data changed, prompt the user      # your own flag / method
-        reply = QMessageBox.question(
-            self,
-            "Quit",
-            "Save your work before quitting?",
-            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
-            QMessageBox.Yes
-        )
-        
-        if reply == QMessageBox.Cancel:
-            event.ignore()                # keep the app open
-            return
-        if reply == QMessageBox.Yes:
-            try:
-                self.controller.quit()   # your own save routine
-            except Exception as e:
-                QMessageBox.critical(self, "Save failed", str(e))
-                event.ignore()
+        if self.controller.canvas.working:
+            reply = QMessageBox.question(
+                self,
+                "Quit",
+                "Save your work before quitting?",
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+                QMessageBox.Yes
+            )
+
+            if reply == QMessageBox.Cancel:
+                event.ignore()                # keep the app open
                 return
+            if reply == QMessageBox.Yes:
+                try:
+                    self.controller.quit()   # your own save routine
+                except Exception as e:
+                    QMessageBox.critical(self, "Save failed", str(e))
+                    event.ignore()
+                    return
 
         # 3) let Qt proceed with shutdown
         event.accept()

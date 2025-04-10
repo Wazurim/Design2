@@ -189,14 +189,15 @@ class AppController:
             self.canvas = PlateCanvas(step_sim_time=float(p["step time [s]:"]))
             self.main_window.layout().addWidget(self.canvas)
             self.canvas.start_simulation(plate)
-            self.working = True
+            self.canvas.working = True
 
         except Exception as e:
             QMessageBox.critical(None, "Error", f"Failed to start simulation:\n{e}")
 
     def stop(self):
         try:
-            self.working = False
+            self.canvas.working = False
+
             times = [x for x in self.canvas.times]
             power = self.canvas.power
             pert = self.canvas.perturbation
