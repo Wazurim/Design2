@@ -102,7 +102,7 @@ class MainWindow(QWidget):
         self.second_layout.addWidget(self.reset)
 
     def set_secondary_layout(self):
-        """Allows to show the graphs and removes the texts fields
+        """Allows to show the graphs and removes the texts fields #TODO refaire avec des stack layout pour pouvoir revenir au main menu...
         """
         self.main_layout = self.layout()
         if self.main_layout is not None:
