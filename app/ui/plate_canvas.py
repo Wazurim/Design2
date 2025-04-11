@@ -1,4 +1,3 @@
-# canvas.py
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import QTimer
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -7,108 +6,113 @@ from matplotlib import cm
 import numpy as np
 
 class PlateCanvas(FigureCanvas):
-    def __init__(self, step_sim_time, parent=None):
+    """Handle the 3D and 2D plots of the plate
+
+    Args:
+        FigureCanvas (FigureCanvas): Matplotlib to qt5 widget
+    """
+    def __init__(self, controller=None, parent=None, step_sim_time=0.5):
         self.fig = Figure(figsize=(10, 5))
-        self.ax_heat = self.fig.add_subplot(121)
-        self.ax_t1   = self.fig.add_subplot(122)
-        #self.ax_t2   = self.fig.add_subplot(223)
-        #self.ax_t3   = self.fig.add_subplot(224)
-        self.fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1,
-                                 wspace=0.4, hspace=0.4)
+        self.ax3d = self.fig.add_subplot(121, projection='3d')
+        self.step_sim_time = step_sim_time 
+        self.ax2d1 = self.fig.add_subplot(122)
+        self.fig.subplots_adjust(
+            left=0.1, right=0.9,  
+            top=0.9, bottom=0.1,   
+            wspace=0.4, hspace=0.4    
+        )
+
         super().__init__(self.fig)
+        self.controller = controller
         self.setParent(parent)
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_plot)
 
-        # state updated by the worker
-        self.latest_temps = None
-        self.latest_time  = 0.0
+    def start_simulation(self, plate):
+        """Start the simulation
 
-        # global colour scale
-        self.vmin = None
-        self.vmax = None
-        self.cb   = None
+        Args:
+            plate (Plate): Object managing the physics behind the simulation at every tick
+        """
+        self.plate = plate
+        self.times = []
+        self.t1 = []
+        self.t2 = []
+        self.t3 = []
+        self.power = []
+        self.perturbation = []
 
-        # traces
-        self.times, self.power, self.perturbation, self.t1, self.t2, self.t3 = [], [], [], [], [], []
+        self.timer.start(1)
 
-        # cheap timer just to refresh the figure
-        #self._redraw_timer = QTimer(self)
-        #self._redraw_timer.timeout.connect(self._redraw)
-        #self._redraw_timer.start(int(step_sim_time *1000))
+        self.ax3d.set_xlim(0, max([self.plate.lx*1000, self.plate.ly*1000]))
+        self.ax3d.set_ylim(0, max([self.plate.lx*1000, self.plate.ly*1000])) 
 
-    # called once from controller after worker is built
-    def bind(self, worker, plate):
-        self.worker = worker
-        self.plate  = plate
-        self.worker.updated.connect(self._on_new_data)
+        self.ax3d.set_autoscalex_on(False)
+        self.ax3d.set_autoscaley_on(False)
+        self.ax3d.set_autoscalez_on(True)
+        self.ax3d.autoscale_view(scalex=False, scaley=False, scalez=True)
+        self.ax3d.view_init(elev=25, azim=-45)
+        self.fig.canvas.draw_idle()   
 
-        # pre‑compute thermistor indices (mm → matrix)
-        self.therm_idx = [
-            (round(x / (1e3*plate.dx)), round(y / (1e3*plate.dy)))
-            for (x, y) in plate.thermistances_positions
-        ]
+    def update_plot(self):
+        """Update the plot with new data.
 
-    # slot: receive fresh array from worker
-    def _on_new_data(self, temps_k, current_time, current_power, current_pert):
-        self.latest_temps = temps_k - 273.0   # °C
-        self.latest_time  = current_time
-
-        # lock‑in global min / max
-        tmin, tmax = self.latest_temps.min(), self.latest_temps.max()
-        self.vmin = tmin if self.vmin is None else min(self.vmin, tmin)
-        self.vmax = tmax if self.vmax is None else max(self.vmax, tmax)
-
-        # update traces
-        i1,j1 = self.therm_idx[0]
-        i2,j2 = self.therm_idx[1]
-        i3,j3 = self.therm_idx[2]
-        self.times.append(current_time)
-        self.t1.append(self.latest_temps[i1,j1])
-        self.t2.append(self.latest_temps[i2,j2])
-        self.t3.append(self.latest_temps[i3,j3])
-        self.power.append(current_power)
-        self.perturbation.append(current_pert)
-        self._redraw()
-
-    # paint everything
-    def _redraw(self):
-        if self.latest_temps is None:
+        """
+        if self.controller.working == False:
+            self.timer.timeout.disconnect(self.update_plot)
             return
 
-        # --- heat map ---
-        self.ax_heat.clear()
-        im = self.ax_heat.imshow(self.latest_temps,
-        cmap=cm.plasma,
-        origin='lower',
-        extent=[
-            0, self.plate.lx*1e3,
-            0, self.plate.ly*1e3
-        ],
-        aspect='auto',
-        vmin=self.vmin,
-        vmax=self.vmax)
-        self.ax_heat.set_title(f"Sim time: {self.latest_time:.1f}s")
-        self.ax_heat.set_xlabel("X [mm]")
-        self.ax_heat.set_ylabel("Y [mm]")
+        steps = int(self.step_sim_time / self.plate.dt)
+        for _ in range(steps):
+            self.plate.update_plate_with_numpy()
 
-        if self.cb is None:
-            self.cb = self.fig.colorbar(im, ax=self.ax_heat, label="Temp [°C]")
-        else:
-            self.cb.update_normal(im)
+        self.ax3d.clear()
+        self.ax3d.set_xlim(0, max([self.plate.lx*1000, self.plate.ly*1000]))
+        self.ax3d.set_ylim(0, max([self.plate.lx*1000, self.plate.ly*1000]))
+        self.ax3d.set_autoscalex_on(False)
+        self.ax3d.set_autoscaley_on(False)
+        self.ax3d.set_autoscalez_on(True)
+        self.ax3d.autoscale_view(scalex=False, scaley=False, scalez=True)
+        temps_c = self.plate.temps - 273
+        self.ax3d.plot_surface(
+            self.plate.Y * 1e3, self.plate.X * 1e3, temps_c,
+            cmap=cm.plasma
+        )
+        self.ax3d.set_title(f"Temps de la simulation: {self.plate.current_time:.1f}s")
+        self.ax3d.set_xlabel("X [mm]")
+        self.ax3d.set_ylabel("Y [mm]")
+        self.ax3d.set_zlabel("Temp [°C]")
 
-        # --- traces ---
-        #for ax, data, title in [
-#            (self.ax_t1, self.t1, "Thermistor 1"),
- #           (self.ax_t1, self.t2, "Thermistor 2"),
-  #          (self.ax_t1, self.t3, "Thermistor 3")
-   #     ]:
-        self.ax_t1.clear()
-        #ax.plot(self.times, data, 'r-')
-        self.ax_t1.plot(self.times, self.t1, 'b-')
-        self.ax_t1.plot(self.times, self.t2, 'y-')
-        self.ax_t1.plot(self.times, self.t3, 'r-')
-        self.ax_t1.set_title("Thermistor")
-        self.ax_t1.set_xlabel("Time [s]")
-        self.ax_t1.set_ylabel("Temp [°C]")
-        self.ax_t1.grid(True)
+        post1 = (round(self.plate.thermistances_positions[0][0] / (1000*self.plate.dx)), round(self.plate.thermistances_positions[0][1] / (1000*self.plate.dy)))
+        post2 = (round(self.plate.thermistances_positions[1][0] / (1000*self.plate.dx)), round(self.plate.thermistances_positions[1][1] / (1000*self.plate.dy)))
+        post3 = (round(self.plate.thermistances_positions[2][0] / (1000*self.plate.dx)), round(self.plate.thermistances_positions[2][1] / (1000*self.plate.dy)))
+
+
+        t1 = self.plate.temps[post1] - 273
+        t2 = self.plate.temps[post2] - 273
+        t3 = self.plate.temps[post3] - 273
+
+        self.times.append(self.plate.current_time)
+        self.t1.append(t1)
+        self.t2.append(t2)
+        self.t3.append(t3)
+        self.power.append(self.plate.current_power)
+        self.perturbation.append(self.plate.current_pert)
+
+        self.ax2d1.clear()
+        self.ax2d1.plot(self.times, self.t1, color='b', label="thermistance 1")
+        self.ax2d1.plot(self.times, self.t2, color='y', label="thermistance 2")
+        self.ax2d1.plot(self.times, self.t3, color='r', label="thermistance 3")
+        self.ax2d1.set_title("thermistances")
+        self.ax2d1.set_xlabel("Temps[s]")
+        self.ax2d1.set_ylabel("Temp [°C]")
+        self.ax2d1.grid(True)
+
+        self.ax2d1.legend()
 
         self.draw()
+
+    def reset_view(self):
+        """Set back the view to its initial state.
+        """
+        self.ax3d.view_init(elev=25, azim=-45)

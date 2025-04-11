@@ -1,6 +1,6 @@
 {
     "plate": {
-        "Total Time [s]:": "1800",
+        "Total Time [s]:": "60",
         "Length Y [mm]:": "116.44",
         "Length X [mm]:": "61.68",
         "Thickness [mm]:": "1.82",
@@ -19,7 +19,7 @@
         "Position thermistance 3 [(X, Y)]:": "(106, 31)",
         "Start heat time [s]:": "10",
         "Stop heat time [s]:": "300000",
-        "step time [s]:": "5",
+        "step time [s]:": "0.01",
         "Start perturbation time [s]:": "10",
         "Stop perturbation time [s]:": "100000",
         "Position perturbation [(X, Y)]:": "(31,31)",
