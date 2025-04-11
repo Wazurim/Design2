@@ -1,10 +1,10 @@
 {
     "plate": {
         "Total Time [s]:": "1800",
-        "Length Y [mm]:": "116.44",
-        "Length X [mm]:": "61.68",
+        "Length X [mm]:": "116.44",
+        "Length Y [mm]:": "61",
         "Thickness [mm]:": "1.82",
-        "N:": "60",
+        "N:": "101",
         "Thermal Conductivity [W/mK]:": "350",
         "Density [kg/m3]:": "2333",
         "Heat Capacity [J/kgK]:": "896",
@@ -18,10 +18,10 @@
         "Position thermistance 2 [(X, Y)]:": "(61, 31)",
         "Position thermistance 3 [(X, Y)]:": "(106, 31)",
         "Start heat time [s]:": "10",
-        "Stop heat time [s]:": "300000",
-        "step time [s]:": "5",
+        "Stop heat time [s]:": "1800",
+        "step time [s]:": "0.5",
         "Start perturbation time [s]:": "10",
-        "Stop perturbation time [s]:": "100000",
+        "Stop perturbation time [s]:": "1800",
         "Position perturbation [(X, Y)]:": "(31,31)",
         "Perturbation [W]:": "0"
     }
