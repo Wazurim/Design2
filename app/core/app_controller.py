@@ -185,10 +185,106 @@ class AppController:
             QMessageBox.critical(None, "Export Failed", f"An error occurred while saving:\n{str(e)}")
             return False
 
+    def __verify_param(self):
+        """Check if the user entered good values
+
+        Raises:
+            Exception: Raise an exception if one criteria is unmatch, will contain the error message for the user to correct
+
+        """
+        p = self.__fetch_params()["plate"]
+        total_time=float(p["Total Time [s]:"])
+        lx=float(p["Length X [mm]:"])
+        ly=float(p["Length Y [mm]:"])
+        thickness=float(p["Thickness [mm]:"])
+        n=int(p["N:"])
+        k=float(p["Thermal Conductivity [W/mK]:"])
+        rho=float(p["Density [kg/m3]:"])
+        cp=float(p["Heat Capacity [J/kgK]:"])
+        h_convection=float(p["Convection Coeff [W/m2K]:"])
+        amp_in=float(p["Amperage Input [A]:"])
+        power_transfer=float(p["Power transfert :"])
+        ambient_temp=float(p["Ambient Temp [°C]:"])
+        initial_plate_temp=float(p["Initial Temp [°C]:"])
+        position_heat_source=ast.literal_eval(p["Position heat source [(X, Y)]:"])
+        positions_thermistances=[
+            ast.literal_eval(p["Position thermistance 1 [(X, Y)]:"]),
+            ast.literal_eval(p["Position thermistance 2 [(X, Y)]:"]),
+            ast.literal_eval(p["Position thermistance 3 [(X, Y)]:"])
+        ]
+        start_heat_time=float(p["Start heat time [s]:"])
+        stop_heat_time=float(p["Stop heat time [s]:"])
+        start_perturbation=float(p["Start perturbation time [s]:"])
+        stop_perturbation=float(p["Stop perturbation time [s]:"])
+        position_perturbation=ast.literal_eval(p["Position perturbation [(X, Y)]:"])
+        perturbation=float(p["Perturbation [W]:"])
+
+        if total_time < 0:
+            raise Exception("Total time must be positive")
+        if lx <= 0:
+            raise Exception("Length X must be positive")
+        if ly <= 0:
+            raise Exception("Length Y must be positive")
+        if thickness <= 0:
+            raise Exception("Thickness must be positive")
+        if n < 1:
+            raise Exception("N must be greater than or equal to 1")
+        if k <= 0:
+            raise Exception("Thermal Conductivity must be positive")
+        if rho <= 0:
+            raise Exception("Density must be positive")
+        if cp <= 0:
+            raise Exception("Heat Capacity must be positive")
+        if h_convection < 0:
+            raise Exception("Convection Coeff must be non-negative")
+        if ambient_temp < -273.15: 
+            raise Exception("Ambient Temp must be greater than or equal to -273.15")
+        if initial_plate_temp < -273.15:
+            raise Exception("Initial Plate Temp must be greater than or equal to -273.15")
+        if position_heat_source[0] < 0 or position_heat_source[0] > lx:
+            raise Exception("Position heat source X must be between 0 and Length X")
+        if position_heat_source[1] < 0 or position_heat_source[1] > ly:
+            raise Exception("Position heat source Y must be between 0 and Length Y")
+        for i in range(3):
+            if positions_thermistances[i][0] < 0 or positions_thermistances[i][0] > lx:
+                raise Exception("Position thermistance X must be between 0 and Length X")
+            if positions_thermistances[i][1] < 0 or positions_thermistances[i][1] > ly:
+                raise Exception("Position thermistance Y must be between 0 and Length Y")
+            
+        if position_perturbation[0] < 0 or position_perturbation[0] > lx:
+            raise Exception("Position perturbation X must be between 0 and Length X")
+        if position_perturbation[1] < 0 or position_perturbation[1] > ly:
+            raise Exception("Position perturbation Y must be between 0 and Length Y")
+        if start_heat_time < 0 or start_heat_time > total_time:
+            raise Exception("Start heat time must be between 0 and Total Time")
+        if stop_heat_time < start_heat_time or stop_heat_time > total_time:
+            raise Exception("Stop heat time must be between Start Heat Time and Total Time")
+        if start_perturbation < 0 or start_perturbation > total_time:
+            raise Exception("Start perturbation time must be between 0 and Total Time")
+        if stop_perturbation < start_perturbation or stop_perturbation > total_time:
+            raise Exception("Stop perturbation time must be between Start Perturbation Time and Total Time")
+        if perturbation < 0:
+            raise Exception("Perturbation must be positive")
+        
+        if n > 100:
+            reply = QMessageBox.question(
+                self.main_window,
+                "Maillage élevé ?",
+                "Un maillage supérieur à 100 peut entraîner des problèmes de performances. Voulez‑vous procéder ?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes
+            )
+            if reply == QMessageBox.No:
+                raise Exception("Reduce Meshing!")
+                    
+        return True
+
     def start_simulation(self):
         """Start the simulation with the parameters specified in the fields
         """
+        
         try:
+            self.__verify_param()
             p = self.__fetch_params()["plate"]
             plate = Plate(
                 total_time=float(p["Total Time [s]:"]),
