@@ -69,7 +69,7 @@ class MainWindow(QWidget):
         add_input("Position de la thermistance 3 [(X, Y)]:", 16, "zone_positions_thermistance_3", "(X, Y)")
         add_input("Position de la perturbation [(X, Y)]:", 17, "zone_position_perturbation", "(X, Y)")
         add_input("Température ambiante [°C]:", 18, "zone_ambient_temp", "23.8")
-        add_input("Température initiale [°C]:", 19, "zone_initial_temp", "0")
+        add_input("Delta de température initiale [°C]:", 19, "zone_initial_temp", "0")
         add_input("Coefficient de convection [W/m²·K]:", 20, "zone_h", "13.5")
         add_input("Conductivité thermique [W/m·K]:", 21, "zone_k", "350")
         add_input("Densité [kg/m³]:", 22, "zone_rho", "2333")
