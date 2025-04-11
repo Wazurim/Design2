@@ -172,7 +172,7 @@ class AppController:
         )
 
         if not file_path:
-            QMessageBox.warning(None, "Export Cancelled", "No file selected for export.")
+            #QMessageBox.warning(None, "Export Cancelled", "No file selected for export.")
             return False
 
         try:
@@ -189,8 +189,7 @@ class AppController:
         """Check if the user entered good values
 
         Raises:
-            Exception: Raise an exception if one criteria is unmatch, will contain the error message for the user to correct
-
+            Exception: Raise an exception if any criterion is not met; include an error message for the user to fix it.
         """
         p = self.__fetch_params()["plate"]
         total_time=float(p["Total Time [s]:"])
