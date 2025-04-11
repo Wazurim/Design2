@@ -92,7 +92,7 @@ class MainWindow(QWidget):
         self.second_layout.addLayout(self.sim_canvas_container)
 
         # === Save and quit Button ===
-        self.stop_btn = QPushButton(" Arreter la simulation et enregistrer les données")
+        self.stop_btn = QPushButton(" Arreter la simulation")
         self.stop_btn.clicked.connect(self.controller.stop)
         self.second_layout.addWidget(self.stop_btn)
 
@@ -136,9 +136,13 @@ class MainWindow(QWidget):
                 return
             if reply == QMessageBox.Yes:
                 try:
-                    self.controller.quit()  
+                    self.controller.quit(save = True)  
                 except Exception as e:
                     QMessageBox.critical(self, "Echec de l'enregistrement", str(e))
                     event.ignore()
                     return
+            if reply == QMessageBox.No:
+                self.controller.quit(save=False)
+        else:
+            self.controller.quit(save = False)
         event.accept()

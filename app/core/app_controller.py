@@ -9,6 +9,7 @@ from app.ui.main_window import MainWindow
 from app.core.JSON_Handler import JsonHandler
 from app.core.plate_transmission import Plate
 from app.ui.plate_canvas import PlateCanvas
+from app.core.DataRecorder import DataRecorder
 
  
 
@@ -323,6 +324,10 @@ class AppController:
             self.main_window.layout().addWidget(self.canvas)
             self.canvas.start_simulation(plate)
             self.working = True
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.new_file = os.path.join(os.getcwd(), f"Data/sim_data_{timestamp}.txt")
+            self.recorder = DataRecorder(self.canvas.plate, file_name=self.new_file, interval=float(p["step time [s]:"])/10)
+            self.recorder.start()
 
         except Exception as e:
             QMessageBox.critical(None, "Error", f"Failed to start simulation:\n{e}")
@@ -331,10 +336,16 @@ class AppController:
         self.canvas.reset_view()
 
     def stop(self):
-        """Stop and save the data to a txt file
+        """Stop the simulation"""
+        self.working = False
+
+
+
+    def save(self):
+        """save the data to a txt file
         """
         try:
-            self.working = False
+            
 
             times = [x for x in self.canvas.times]
             power = self.canvas.power
@@ -350,8 +361,12 @@ class AppController:
                 QMessageBox.critical(None, "Error", f"Failed to save data:\n{e}")
                 print("times:", times,"power:", power, "perturbation:", pert, "t1:", t1,"t2:", t2, "t3:", t3)
 
-    def quit(self):
+    def quit(self, save = True):
         """Stop and save the data to a txt file then quit the app
         """
-        self.stop()
+        self.working = False
+        if save:
+            self.save()
+        self.recorder.stop()
+        self.recorder.join()
         self.app.quit()
