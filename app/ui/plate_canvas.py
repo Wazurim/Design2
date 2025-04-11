@@ -6,27 +6,34 @@ from matplotlib import cm
 import numpy as np
 
 class PlateCanvas(FigureCanvas):
-    def __init__(self, parent=None, step_sim_time=0.5):
+    """Handle the 3D and 2D plots of the plate
+
+    Args:
+        FigureCanvas (FigureCanvas): Matplotlib to qt5 widget
+    """
+    def __init__(self, controller=None, parent=None, step_sim_time=0.5):
         self.fig = Figure(figsize=(10, 5))
         self.ax3d = self.fig.add_subplot(121, projection='3d')
-        self.working = False
         self.step_sim_time = step_sim_time 
         self.ax2d1 = self.fig.add_subplot(122)
-        #self.ax2d2 = self.fig.add_subplot(223)
-        #self.ax2d3 = self.fig.add_subplot(224)
         self.fig.subplots_adjust(
-            left=0.1, right=0.9,    # shrink width-wise
-            top=0.9, bottom=0.1,    # shrink height-wise
-            wspace=0.4, hspace=0.4    # space between plots
+            left=0.1, right=0.9,  
+            top=0.9, bottom=0.1,   
+            wspace=0.4, hspace=0.4    
         )
 
         super().__init__(self.fig)
+        self.controller = controller
         self.setParent(parent)
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_plot)
 
     def start_simulation(self, plate):
+        """Start the simulation
 
+        Args:
+            plate (Plate): Object managing the physics behind the simulation at every tick
+        """
         self.plate = plate
         self.times = []
         self.t1 = []
@@ -37,17 +44,21 @@ class PlateCanvas(FigureCanvas):
 
         self.timer.start(1)
 
-        self.ax3d.set_xlim(0, 120)
-        self.ax3d.set_ylim(0, 120) 
+        self.ax3d.set_xlim(0, max([self.plate.lx*1000, self.plate.ly*1000]))
+        self.ax3d.set_ylim(0, max([self.plate.lx*1000, self.plate.ly*1000])) 
+
         self.ax3d.set_autoscalex_on(False)
         self.ax3d.set_autoscaley_on(False)
         self.ax3d.set_autoscalez_on(True)
         self.ax3d.autoscale_view(scalex=False, scaley=False, scalez=True)
-        #self.ax3d.view_init(elev=25, azim=25)
+        self.ax3d.view_init(elev=25, azim=-45)
         self.fig.canvas.draw_idle()   
 
     def update_plot(self):
-        if self.working == False:
+        """Update the plot with new data.
+
+        """
+        if self.controller.working == False:
             self.timer.timeout.disconnect(self.update_plot)
             return
 
@@ -56,8 +67,8 @@ class PlateCanvas(FigureCanvas):
             self.plate.update_plate_with_numpy()
 
         self.ax3d.clear()
-        self.ax3d.set_xlim(0, 120)
-        self.ax3d.set_ylim(0, 120)
+        self.ax3d.set_xlim(0, max([self.plate.lx*1000, self.plate.ly*1000]))
+        self.ax3d.set_ylim(0, max([self.plate.lx*1000, self.plate.ly*1000]))
         self.ax3d.set_autoscalex_on(False)
         self.ax3d.set_autoscaley_on(False)
         self.ax3d.set_autoscalez_on(True)
@@ -67,7 +78,7 @@ class PlateCanvas(FigureCanvas):
             self.plate.Y * 1e3, self.plate.X * 1e3, temps_c,
             cmap=cm.plasma
         )
-        self.ax3d.set_title(f"Sim Time: {self.plate.current_time:.1f}s")
+        self.ax3d.set_title(f"Temps de la simulation: {self.plate.current_time:.1f}s")
         self.ax3d.set_xlabel("X [mm]")
         self.ax3d.set_ylabel("Y [mm]")
         self.ax3d.set_zlabel("Temp [°C]")
@@ -89,10 +100,10 @@ class PlateCanvas(FigureCanvas):
         self.perturbation.append(self.plate.current_pert)
 
         self.ax2d1.clear()
-        self.ax2d1.plot(self.times, self.t1, color='b', label="Thermistor 1")
-        self.ax2d1.plot(self.times, self.t2, color='y', label="Thermistor 2")
-        self.ax2d1.plot(self.times, self.t3, color='r', label="Thermistor 3")
-        self.ax2d1.set_title("Thermistences")
+        self.ax2d1.plot(self.times, self.t1, color='b', label="thermistance 1")
+        self.ax2d1.plot(self.times, self.t2, color='y', label="thermistance 2")
+        self.ax2d1.plot(self.times, self.t3, color='r', label="thermistance 3")
+        self.ax2d1.set_title("thermistances")
         self.ax2d1.set_xlabel("Temps[s]")
         self.ax2d1.set_ylabel("Temp [°C]")
         self.ax2d1.grid(True)
@@ -100,3 +111,8 @@ class PlateCanvas(FigureCanvas):
         self.ax2d1.legend()
 
         self.draw()
+
+    def reset_view(self):
+        """Set back the view to its initial state.
+        """
+        self.ax3d.view_init(elev=25, azim=-45)

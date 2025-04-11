@@ -13,6 +13,8 @@ from app.ui.plate_canvas import PlateCanvas
  
 
 class AppController:
+    """Controller object for the app
+    """
     def __init__(self):
         self.app = QApplication(sys.argv)
         self.main_window = MainWindow(self)
@@ -32,6 +34,8 @@ class AppController:
 
 
     def __load_config_list(self):
+        """Load the list of JSON file for the combo box
+        """
         if not os.path.exists(self.config_dir):
             print("No config directory found")
             return
@@ -41,24 +45,44 @@ class AppController:
             self.main_window.cb_import.setCurrentText("latest.json")
             self.load_params("latest.json")
 
+    def __update_config_list(self):
+        """Update the list of JSON config files in the combo box
+        """
+        self.main_window.cb_import.currentIndexChanged.disconnect(self.load_params)
+        if not os.path.exists(self.config_dir):
+            print("No config directory found")
+            return
+        files = [f for f in os.listdir(self.config_dir) if f.endswith(".json")]
+        self.main_window.cb_import.clear()
+        self.main_window.cb_import.addItems(files)
+        self.main_window.cb_import.currentIndexChanged.connect(self.load_params)
+
+
     def show_main_window(self):
+        """Display the main window
+        """
         self.main_window.setGeometry(self.screen_x, self.screen_y, self.screen_width, self.screen_height)
         self.main_window.show()
 
-    def show_serial_monitor(self):
+    def __show_serial_monitor(self):
+        """Show the serial monitor /// DEPRECATED ///
+        """
         self.main_window.show()
 
     def autosave(self):
+        """Autosave changes in the altest.json file
+        """
         params = self.__fetch_params()
         self.json_handler.write_json_file(os.path.join(self.config_dir, "latest.json"), params)
+        self.__update_config_list()
 
     def __fetch_params(self):
         ui = self.main_window
         return {
             "plate": {
                 "Total Time [s]:": ui.zone_total_time.toPlainText(),
-                "Length Y [mm]:": ui.zone_length.toPlainText(),
-                "Length X [mm]:": ui.zone_Depth.toPlainText(),
+                "Length X [mm]:": ui.zone_length.toPlainText(),
+                "Length Y [mm]:": ui.zone_Depth.toPlainText(),
                 "Thickness [mm]:": ui.zone_thick.toPlainText(),
                 "N:": ui.zone_n.toPlainText(),
                 "Thermal Conductivity [W/mK]:": ui.zone_k.toPlainText(),
@@ -84,6 +108,11 @@ class AppController:
         }
 
     def load_params(self, filename=None):
+        """Load parameters from the specified file
+
+        Args:
+            filename (string, optional): Name of the wanted config file. Defaults to None, will leave spaces blank.
+        """
         try:
             if filename is None or type(filename) != str:
                 filename = self.main_window.cb_import.currentText()
@@ -101,8 +130,8 @@ class AppController:
                 p = self.json_handler.get_data().get("plate", {})
                 ui = self.main_window
                 ui.zone_total_time.setPlainText(str(p.get("Total Time [s]:", "")))
-                ui.zone_length.setPlainText(str(p.get("Length Y [mm]:", "")))
-                ui.zone_Depth.setPlainText(str(p.get("Length X [mm]:", "")))
+                ui.zone_length.setPlainText(str(p.get("Length X [mm]:", "")))
+                ui.zone_Depth.setPlainText(str(p.get("Length Y [mm]:", "")))
                 ui.zone_thick.setPlainText(str(p.get("Thickness [mm]:", "")))
                 ui.zone_n.setPlainText(str(p.get("N:", "")))
                 ui.zone_k.setPlainText(str(p.get("Thermal Conductivity [W/mK]:", "")))
@@ -129,6 +158,11 @@ class AppController:
             print(f"[CRITICAL] Failed to load params: {e}")
 
     def export_params(self):
+        """Export the parameters to a JSON file.
+
+        Returns:
+            bool: Boolean if the save was a success or fail
+        """
         default = os.path.join(self.cwd, self.config_dir)
         file_path, _ = QFileDialog.getSaveFileName(
         None, 
@@ -143,19 +177,23 @@ class AppController:
 
         try:
             params = self.__fetch_params()
-            return self.json_handler.write_json_file(file_path, params)
+            res = self.json_handler.write_json_file(file_path, params)
+            self.__update_config_list()
+            return res
 
         except Exception as e:
             QMessageBox.critical(None, "Export Failed", f"An error occurred while saving:\n{str(e)}")
             return False
 
     def start_simulation(self):
+        """Start the simulation with the parameters specified in the fields
+        """
         try:
             p = self.__fetch_params()["plate"]
             plate = Plate(
                 total_time=float(p["Total Time [s]:"]),
-                lx=float(p["Length Y [mm]:"])/1000,
-                ly=float(p["Length X [mm]:"])/1000,
+                lx=float(p["Length X [mm]:"])/1000,
+                ly=float(p["Length Y [mm]:"])/1000,
                 thickness=float(p["Thickness [mm]:"])/1000,
                 n=int(p["N:"]),
                 k=float(p["Thermal Conductivity [W/mK]:"]),
@@ -186,17 +224,22 @@ class AppController:
             self.main_window.set_secondary_layout()
 
 
-            self.canvas = PlateCanvas(step_sim_time=float(p["step time [s]:"]))
+            self.canvas = PlateCanvas(controller=self, step_sim_time=float(p["step time [s]:"]))
             self.main_window.layout().addWidget(self.canvas)
             self.canvas.start_simulation(plate)
-            self.canvas.working = True
+            self.working = True
 
         except Exception as e:
             QMessageBox.critical(None, "Error", f"Failed to start simulation:\n{e}")
 
+    def reset_view(self):
+        self.canvas.reset_view()
+
     def stop(self):
+        """Stop and save the data to a txt file
+        """
         try:
-            self.canvas.working = False
+            self.working = False
 
             times = [x for x in self.canvas.times]
             power = self.canvas.power
@@ -213,18 +256,7 @@ class AppController:
                 print("times:", times,"power:", power, "perturbation:", pert, "t1:", t1,"t2:", t2, "t3:", t3)
 
     def quit(self):
-        try:
-            times = [x for x in self.canvas.times]
-            power = self.canvas.power
-            pert = self.canvas.perturbation
-            t1 = [x for x in self.canvas.t1]
-            t2 = [x for x in self.canvas.t2]
-            t3 = [x for x in self.canvas.t3]
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            new_file = os.path.join(os.getcwd(), f"Data/sim_data_{timestamp}.txt")
-            np.savetxt(new_file, np.transpose([times, power, pert, t1, t2, t3]))
-                
-        except Exception as e:
-                QMessageBox.critical(None, "Error", f"Failed to save data:\n{e}")
-                print("times:", times,"power:", power, "perturbation:", pert, "t1:", t1,"t2:", t2, "t3:", t3)
+        """Stop and save the data to a txt file then quit the app
+        """
+        self.stop()
         self.app.quit()

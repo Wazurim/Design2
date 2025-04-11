@@ -81,6 +81,11 @@ class Plate:#117.21, 61.6
       
 
     def update_plate_with_numpy(self):
+        """Progress the simulation 1 tick using numpy matrix
+
+        Returns:
+            np.array: Array of the temps
+        """
         # Copy temperatures to avoid modifying the array while computing
         self.new_temps[:] = self.temps[:]
 
@@ -120,11 +125,16 @@ class Plate:#117.21, 61.6
         self.new_temps[:, -1] += self.dt_alpha * ((self.temps[:, -2] - self.temps[:, -1]) / self.dy**2)
         self.temps[:] = self.new_temps
         self.current_time += self.dt
-        #print(self.current_time)
+
         return self.temps
         
     
-    def update_plate(self):
+    def __update_plate(self):
+        """Progress the simulation 1 tick using for loops (slow version) ///  deprecated  ///
+
+        Returns:
+            np.array: Array of the temps
+        """
         for i in range(self.nx):
             for j in range(self.ny):
                 self.new_temps[i, j] = self.temps[i, j]
@@ -235,4 +245,4 @@ class Plate:#117.21, 61.6
 
         self.temps[:] = self.new_temps
         self.current_time += self.dt
-        #print(self.current_time)
+
