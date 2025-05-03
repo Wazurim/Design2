@@ -14,13 +14,11 @@
 #define TIMER3_PRESCALER 1024UL
 #define OCR3A_VALUE ((uint16_t)((F_CPU / (TIMER3_PRESCALER * DESIRED_ADC_UPDATE_FREQ)) - 1))
 
-// Global variables for control and timing
+
 volatile uint32_t adcUpdateCount = 0;
 volatile uint8_t currentChannel = 0;
 volatile bool newSampleFlag = false;
-
-// ADC raw values for 4 channels (A0 to A3)
-volatile uint16_t adcRawValues[4]; // Store ADC results
+volatile uint16_t adcRawValues[4];
 
 
 // Control loop variables
@@ -32,44 +30,43 @@ float consigne = 25;
 float P = 0.88;   
 float I = 1/101.72;
 float D = 0;
-float F = 0;  
+float F = 0;   
 float previous_control = 0;
 float previous_error = 0;
 float previous_t2s[] = {25, 25, 25};
 float previous_estimated_t3 = -1; 
 bool isFirstPI = true;
 int time_counter = 0;
-// float integral = 0;
+
 const float dt = 1/DESIRED_ADC_UPDATE_FREQ; 
 
-// Forward declarations for serial command handling
+
 void handleLine(const String &line);
 void parseParameters(const String &line);
 float voltage_to_temp(float volt);
 
-
+//
+// Timer3 Compare Match A ISR
+// Fires at the rate defined by DESIRED_ADC_UPDATE_FREQ (e.g., 1 Hz)
 ISR(TIMER3_COMPA_vect) {
 
     adcUpdateCount++;
-    currentChannel = 0; // Reset channel index
-    ADMUX = (ADMUX & 0xF8) | currentChannel; // Select channel 0
-    ADCSRA |= (1 << ADSC); // Start ADC conversion
-
-    
+    currentChannel = 0; 
+    ADMUX = (ADMUX & 0xF8) | currentChannel; 
+    ADCSRA |= (1 << ADSC); 
 }
 
-
+//
 // ADC Conversion Complete ISR
 // The ADC is running in free-running mode and continuously updates the raw values.
 ISR(ADC_vect) {
-    adcRawValues[currentChannel] = ADC; // Read ADC result
-
+    adcRawValues[currentChannel] = ADC; 
     if (currentChannel < 3) {
         currentChannel++; // Move to the next channel
         ADMUX = (ADMUX & 0xF8) | currentChannel; // Set next ADC channel
         ADCSRA |= (1 << ADSC); // Start next conversion
     } else {
-        newSampleFlag = true; // Flag that all conversions are complete
+        newSampleFlag = true; 
     }
 }
 
@@ -84,8 +81,6 @@ void ADC_Init() {
 //
 // Timer1 setup (PWM)
 void setupTimer1(){
-   // ---------- Timer1 Setup: 16-bit PWM on OC1A ----------
-    // Clear Timer1 registers
     TCCR1A = 0;
     TCCR1B = 0;
     TCCR1A |= (1 << COM1A1) | (1 << WGM11);
@@ -97,8 +92,6 @@ void setupTimer1(){
 //
 // Timer3 setup (ADC)
 void setupTimer3(){
-    // ---------- Timer3 Setup: ADC Update Interrupt ----------
-    // Clear Timer3 registers
     TCCR3A = 0;
     TCCR3B = 0;
     TCCR3B = (1 << WGM32) | (1 << CS32) | (1 << CS30); 
@@ -111,17 +104,12 @@ void setupTimer3(){
 void setup() {
     Serial.begin(115200);
     ADC_Init();
-    ADCSRA |= (1 << ADSC);  // Start ADC conversions in free-running mode
-
-    // Set pin 11 as PWM output (OC1A)
+    ADCSRA |= (1 << ADSC);  
     pinMode(11, OUTPUT);
 
     cli(); // Disable interrupts during timer configuration
-
     setupTimer1();
-
     setupTimer3();
-
     sei(); // Re-enable interrupts
 
     Serial.println("Mega2560 started with split timers:");
@@ -143,11 +131,10 @@ void setup() {
 void loop() {
     noInterrupts();
     bool sampleReady = newSampleFlag;
-    // Copy the latest ADC voltage values to temporary variables
     float currSamplet2 = adcRawValues[0] * (5.0 / 1023.0);
     float currSamplet4 = adcRawValues[1] * (5.0 / 1023.0);
     float currSamplet1 = adcRawValues[2] * (5.0 / 1023.0);
-    float currSamplet3 = adcRawValues[3] * (5.0 / 1023.0); // Used for control error computation
+    float currSamplet3 = adcRawValues[3] * (5.0 / 1023.0); 
     uint32_t updateCountSnapshot = adcUpdateCount;
     
 
@@ -159,9 +146,7 @@ void loop() {
     interrupts();
     
     if (Serial.available() > 0) {
-
         String line = Serial.readStringUntil('\n');
-
         line.trim();
         if (line.length() > 0) {
             handleLine(line);
@@ -186,7 +171,7 @@ void loop() {
             float i = I;
             float d = D;
             float f = F;
-            float control = (error * (p + p * f / 2 + i / 2 + d * f) + previous_error * (i / 2 - d * f) + previous_control *  (1 - f/2))/(1 + f/2);
+            float control = (previous_control + error * (i/2 + p) + previous_error * (i/2-p));
 
             if (control > 2.5f) {
                 control = 2.5f;
@@ -195,6 +180,7 @@ void loop() {
                 control = -2.5f;
             }
             previous_control = control;
+            // Adjust for operation point
             control += 2.5f;
 
             // Anti-windup
@@ -204,21 +190,19 @@ void loop() {
             else if (control < 0.1f) {
                 control = 0.1f;
             }
-
             control = 5 - control;
 
             // Set previous values before going into PWM.
-            
             previous_error = error;
 
             // Convert volts to PWM
             control = ((control-0.1f)/4.8f) * PWM_TOP;
-
+            
             // Set PWM output
             uint16_t pwmValue = (uint16_t) control;
             OCR1A = pwmValue;
 
-            Serial.print(trueTime * 1, 1);  // Time in ms
+            Serial.print(trueTime * 1, 1); 
             Serial.print(" s | PWM : ");
             Serial.print(pwmValue);
             Serial.print(" / ");
@@ -238,7 +222,6 @@ void loop() {
             Serial.print(" | error: ");
             Serial.println(error, 3);
 
-        }
         else {
             OCR1A = PWM_TOP/2;
             Serial.print(trueTime * 1, 1);
@@ -261,7 +244,7 @@ void loop() {
     }
 }
 
-
+//
 // Serial command processing functions
 void handleLine(const String &line) {
     if (line.equalsIgnoreCase("p")) {
@@ -275,6 +258,7 @@ void handleLine(const String &line) {
         Serial.println("Control loop OFF");
     } else if (line.equalsIgnoreCase("R")) {
         running = false;
+        previousControl = 0;
         Time = CurrentTime + Time;
         CurrentTime = 0;
 
@@ -286,6 +270,7 @@ void handleLine(const String &line) {
     }
 }
 void parseParameters(const String &line) {
+    // Remove the command prefix (e.g., "PARAM ") 
     isFirstPI = true;
     int firstSpace = line.indexOf(' ');
     if(firstSpace == -1) {
@@ -329,7 +314,8 @@ void parseParameters(const String &line) {
 }
 
 
-// Convert voltage to temperature using the Steinhart-Hart equation
+// Function to convert voltage to temperature for T2 sensor
+/// This function is used to convert the voltage reading from the T2 sensor to temperature in Celsius using Steinhart-Hart equation.
 float voltage_to_tempt1(float volt) {
     const float A1 = 0.00335401643468053;
     const float B = 0.000256523550896126;
@@ -343,7 +329,8 @@ float voltage_to_tempt1(float volt) {
     return temp;
 }
 
-// Convert voltage to temperature using the Steinhart-Hart equation
+/// Function to convert voltage to temperature for T3 sensor
+/// This function is used to convert the voltage reading from the T3 sensor to temperature in Celsius using Steinhart-Hart equation.
 float voltage_to_tempt3(float volt) {
     const float A1 = 0.00335401643468053;
     const float B = 0.000256523550896126;
