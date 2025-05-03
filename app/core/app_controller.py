@@ -172,7 +172,6 @@ class AppController:
         )
 
         if not file_path:
-            #QMessageBox.warning(None, "Export Cancelled", "No file selected for export.")
             return False
 
         try:

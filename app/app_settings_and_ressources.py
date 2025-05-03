@@ -1,4 +1,7 @@
 from PyQt5.QtGui import QFont
+#App ressouces and settings
+# This file contains all the settings and resources for the application.
+
 
 # Serial communication
 SERIAL_PORT = 'COM6'

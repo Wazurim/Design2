@@ -7,7 +7,8 @@ from PyQt5.QtGui import QFont
 
 class MainWindow(QWidget):
     """class for the main window of the application.
- 
+    This class is responsible for creating the main window and its layout.
+    It contains all the input fields for the simulation parameters and the buttons to start the simulation and save the parameters.
 
     Args:
         QWidget (_type_): Widget class from PyQt5
@@ -38,6 +39,15 @@ class MainWindow(QWidget):
         self.main_layout.addLayout(grid)
 
         def add_input(label, row, attr_name, placeholder=""):
+            """Create a label and a text field for the input parameters.
+            This function is used to create the input fields for the simulation parameters.
+
+            Args:
+                label (String): Label for the input field
+                row (int): _row number in the grid layout
+                attr_name (_type_): _name of the attribute in the controller to be set
+                placeholder (str, optional): Placeholder text for the input field. Defaults to "".
+            """
             label_widget = QLabel(label)
             label_widget.setFont(QFont("Arial", 11))
             field = QPlainTextEdit()

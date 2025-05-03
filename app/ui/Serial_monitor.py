@@ -22,6 +22,11 @@ from PyQt5.QtWidgets import (
 # ExcelRecorder (unchanged from before, adapted for your new line format)
 ################################################################################
 class ExcelRecorder:
+    """ Class to record data in an Excel file.
+    This class is responsible for creating a copy of the template file and writing data to it.
+    It uses openpyxl to handle Excel files.
+
+    """
     regex_time_s  = re.compile(r"([\d\.]+)\s*s")   
     regex_pwm     = re.compile(r"PWM\s*:\s*([\d]+)\s*/\s*([\d]+)")
     regex_t1      = re.compile(r"t1:\s*([\d\.]+)")
@@ -31,6 +36,12 @@ class ExcelRecorder:
     regex_t4      = re.compile(r"t4:\s*([\d\.]+)")
 
     def __init__(self, template_path, sheet_name="data"):
+        """ Initialize the ExcelRecorder with the template path and sheet name.
+
+        Args:
+            template_path (String): Path to the template Excel file.
+            sheet_name (str, optional): Name of the sheet to write data to. Defaults to "data".
+        """
         self.template_path = template_path
         self.sheet_name = sheet_name
         self.workbook = None
@@ -42,6 +53,13 @@ class ExcelRecorder:
         self.consigne = 25.0
 
     def create_copy_and_open(self, new_path):
+        """ Create a copy of the template file and open it for writing.
+        This method will copy the template file to a new path and open it using openpyxl.
+        It will also reset the row index and clear the t3 values.
+
+        Args:
+            new_path (String): Path to the new Excel file to create.
+        """
         import shutil
         from openpyxl import load_workbook
 
@@ -55,9 +73,22 @@ class ExcelRecorder:
         self.t3_values.clear()
 
     def set_consigne(self, value):
+        """ Set the consigne value for the Excel file.
+
+        Args:
+            value (float): Consigne value to set.
+        """
         self.consigne = float(value)
 
     def parse_and_write(self, line):
+        """ Parse the line received from the serial port and write data to the Excel file.
+        This method will extract the relevant data from the line and write it to the Excel file.
+        It will also calculate the time difference from the base time and update the row index.
+
+
+        Args:
+            line (_type_): Line received from the serial port.
+        """
         m_s = self.regex_time_s.search(line)
         print(line)
         if not m_s:
@@ -109,6 +140,10 @@ class ExcelRecorder:
         self.row_index += 1
 
     def save_and_close(self):
+        """ Save the Excel file and close it.
+        This method will save the current workbook and close it. It will also reset the workbook and sheet attributes.
+
+        """
         if self.workbook:
             self.workbook.save(self.current_path)
             self.workbook = None
@@ -119,13 +154,29 @@ class ExcelRecorder:
 # Thread for reading data from the serial port
 ################################################################################
 class SerialReadThread(threading.Thread):
+    """ Thread to read data from the serial port.
+    This thread will continuously read lines from the serial port and emit a signal with the line data.
+
+    Args:
+        threading (Thread): Thread class from the threading module.
+    """
     def __init__(self, ser, callback):
+        """ Initialize the SerialReadThread with the serial port and callback function.
+        This method will set the serial port and callback function, and initialize the running flag.
+
+
+        Args:
+            ser (serial.Serial):  serial.Serial object: Serial port to read data from.
+            callback (function): Callback function to call with the line data.
+        """
         super().__init__()
         self.ser = ser
         self.callback = callback
         self.running = True
 
     def run(self):
+        """ Run the thread to read data from the serial port.
+        """
         while self.running:
             try:
                 line = self.ser.readline().decode('ascii', errors='ignore').strip()
@@ -137,6 +188,8 @@ class SerialReadThread(threading.Thread):
         print("Serial reading thread terminated.")
 
     def stop(self):
+        """ Stop the thread and close the serial port.
+        """
         self.running = False
 
 
@@ -144,7 +197,18 @@ class SerialReadThread(threading.Thread):
 # Live Plot #1: Temperatures (T1..T4 + T3_est) [no stability text here]
 ################################################################################
 class TempPlotWidget(QWidget):
+    """ Widget to plot the temperatures in real-time.
+
+    Args:
+        QWidget (QWidget): QWidget class from the PyQt5 module.
+    """
     def __init__(self, parent=None):
+        """
+        Initialize the TempPlotWidget with the parent widget.
+
+        Args:
+            parent (_type_, optional): Parent widget. Defaults to None.
+        """
         super().__init__(parent)
 
         # Data arrays
@@ -178,6 +242,11 @@ class TempPlotWidget(QWidget):
         self.setLayout(layout)
 
     def get_moyt3_est(self):
+        """ Get the average of the last 30 T3_est values.
+
+        Returns:
+            float:  Average of the last 30 T3_est values or 0 if no values are available.
+        """
         
         if  len(self.t3_values) > 30:
             t3_moy = sum(self.t3_values[-30:]) / 30
@@ -192,6 +261,14 @@ class TempPlotWidget(QWidget):
 
     @pyqtSlot(str)
     def parse_and_update(self, line):
+        """ Parse the line received from the serial port and update the plot.
+        This method will extract the relevant data from the line and update the plot with the new data.
+        It will also adjust the y-axis limits based on the data.
+
+
+        Args:
+            line (_type_):  Line received from the serial port.
+        """
         match_s = re.search(r"([\d\.]+)\s*s", line)
         if not match_s:
             return
@@ -236,38 +313,19 @@ class TempPlotWidget(QWidget):
             self.consigne_values.append(None)
 
         all_y = self.t1_values + self.t2_values + self.t3_est_values + self.t3_values + self.t4_values + self.consigne_values
-
-        # y_min, y_max = (0, 0)
-
         all_y = [x for x in all_y if x is not None]
-        
-        # if all_y is not None:
         y_min, y_max = min(all_y), max(all_y)
-
-
         self.ax.set_ylim(y_min-1, y_max+1)
-
-        # desired_delta = 12
-        # if y_max - y_min < desired_delta:
-        #     center = (y_max + y_min) / 2
-        #     y_min = center - desired_delta / 2
-        #     y_max = center + desired_delta / 2
-
-        # else:
-        #     self.ax.autoscale_view()
 
         # Update lines
         self.line_consigne.set_xdata(self.time_values)
         self.line_consigne.set_ydata([val if val is not None else float("nan") for val in self.consigne_values])
-        # self.line_consigne.set_ydata(self.consigne_values)
         self.line_t1.set_xdata(self.time_values)
         self.line_t1.set_ydata(self.t1_values)
         self.line_t2.set_xdata(self.time_values)
         self.line_t2.set_ydata(self.t2_values)
         self.line_t3.set_xdata(self.time_values)
         self.line_t3.set_ydata(self.t3_values)
-        # self.line_t4.set_xdata(self.time_values)
-        # self.line_t4.set_ydata(self.t4_values)
 
         # T3_est -> None => NaN
         t3_est_y = [val if val is not None else float("nan") for val in self.t3_est_values]
@@ -279,6 +337,8 @@ class TempPlotWidget(QWidget):
         self.canvas.draw()
 
     def reset_plot(self):
+        """ Reset the plot data and clear the lines.
+        """
         self.time_values.clear()
         self.consigne_values.clear()
         self.t1_values.clear()
@@ -303,7 +363,18 @@ class TempPlotWidget(QWidget):
 # Live Plot #2: Command (U)
 ################################################################################
 class CommandPlotWidget(QWidget):
+    """ Widget to plot the command U in real-time.
+
+
+    Args:
+        QWidget (QWidget): QWidget class from the PyQt5 module.
+    """
     def __init__(self, parent=None):
+        """_summary_
+
+        Args:
+            parent (QWidget, optional): Parent widget. Defaults to None.
+        """
         super().__init__(parent)
         self.time_values = []
         self.u_values    = []
@@ -325,6 +396,14 @@ class CommandPlotWidget(QWidget):
 
     @pyqtSlot(str)
     def parse_and_update(self, line):
+        """ Parse the line received from the serial port and update the plot.
+        This method will extract the relevant data from the line and update the plot with the new data.
+        It will also adjust the y-axis limits based on the data.
+
+
+        Args:
+            line (_type_):  Line received from the serial port.
+        """
         match_s = re.search(r"([\d\.]+)\s*s", line)
         if not match_s:
             return
@@ -345,25 +424,6 @@ class CommandPlotWidget(QWidget):
         self.line_u.set_xdata(self.time_values)
         self.line_u.set_ydata(self.u_values)
 
-        #all_y = self.u_values
-
-        # y_min, y_max = (0, 0)
-
-        #all_y = [x for x in all_y if x is not None]
-        
-        # if all_y is not None:
-        #y_min, y_max = min(all_y), max(all_y)
-
-
-
-        #desired_delta = 100
-        #if y_max - y_min < desired_delta:
-        #    center = (y_max + y_min) / 2
-        #    y_min = center - desired_delta / 2
-        #    y_max = center + desired_delta / 2
-        #    self.ax.set_ylim(y_min, y_max)
-
-        #else:
         self.ax.autoscale_view()
 
         self.ax.relim()
@@ -371,6 +431,9 @@ class CommandPlotWidget(QWidget):
         self.canvas.draw()
 
     def reset_plot(self):
+        """
+        Reset the plot data and clear the lines.
+        """
         self.time_values.clear()
         self.u_values.clear()
 
@@ -384,10 +447,36 @@ class CommandPlotWidget(QWidget):
 # Main PyQt Window
 ################################################################################
 class SerialMonitor(QWidget):
+    """ Class for the main window of the serial monitor application.
+    This class is responsible for creating the main window and its layout.
+    It contains all the input fields for the simulation parameters and the buttons to start the simulation and save the parameters.
+
+
+    Args:
+        QWidget (QWidget):  QWidget class from the PyQt5 module.
+
+    Raises:
+        RuntimeError: Could not open port.
+
+    """
     lineReceivedText = pyqtSignal(str)
     lineReceivedPlot = pyqtSignal(str)
 
     def __init__(self, port="COM4", baudrate=115200, parent=None):
+        """ Initialize the SerialMonitor with the given port and baudrate.
+        This method will set the port and baudrate, and initialize the serial port.
+        It will also create the UI elements and connect the signals to the slots.
+        It will also create the ExcelRecorder object to record data in an Excel file.
+        It will also create the stability tracking variables and connect the signals to the slots.
+
+        Args:
+            port (str, optional): Port to open. Defaults to "COM4".
+            baudrate (int, optional): Baudrate for the serial port. Defaults to 115200.
+            parent (_type_, optional): Parent widget. Defaults to None.
+
+        Raises:
+            RuntimeError: Could not open port.
+        """
         super().__init__(parent)
         self.setWindowTitle("Design 2 Prototype serial monitor")
         self.setWindowIcon(QIcon("icon.png"))
@@ -426,6 +515,10 @@ class SerialMonitor(QWidget):
         self.read_thread.start()
 
     def _build_ui(self):
+        """ Build the UI for the main window.
+        This method will create the main layout and add all the UI elements to it.
+
+        """
         main_layout = QHBoxLayout()
         control_layout = QVBoxLayout()
         plot_layout = QVBoxLayout()
@@ -486,23 +579,11 @@ class SerialMonitor(QWidget):
         self.lbl_timer = QLabel("N/A")
         self.lbl_timer.setStyleSheet("color: red;")
         control_layout.addWidget(self.lbl_timer)
-        # Raw command
-        # = QHBoxLayout()
-        #raw_cmd_layout.addWidget(QLabel("Raw Command:"))
-        #self.input_raw_cmd = QLineEdit("PARAM C=25.0 I=1.0 K=0.5")
-        #raw_cmd_layout.addWidget(self.input_raw_cmd)
-        #self.btn_send_raw = QPushButton("Send")
-        #raw_cmd_layout.addWidget(self.btn_send_raw)
-        #self.btn_send_raw.clicked.connect(self.send_raw_cmd)
-        #control_layout.addLayout(raw_cmd_layout)
 
         # Text area
         self.text_area = QPlainTextEdit()
         self.text_area.setReadOnly(True)
         control_layout.addWidget(self.text_area)
-
-        # **Add a stability label** here (outside the graph)
-        
 
         # Plots
         self.temp_plot = TempPlotWidget()
@@ -519,6 +600,12 @@ class SerialMonitor(QWidget):
     # BACKGROUND DATA HANDLER
     #############################################
     def on_line_received(self, line):
+        """ Handle the line received from the serial port.
+        This method will emit a signal with the line data and parse it to update the plots.
+
+        Args:
+            line (_type_): Line received from the serial port.
+        """
         self.lineReceivedText.emit(f"[RX] {line}")
         self.lineReceivedPlot.emit(line)
 
@@ -529,12 +616,25 @@ class SerialMonitor(QWidget):
             self.excel_recorder.parse_and_write(line)
 
     def append_line(self, text):
+        """ Append a line to the text area.
+        This method will append the given text to the text area in the UI.
+
+        Args:
+            text (string): Text to append.
+        """
         self.text_area.appendPlainText(text)
 
     #############################################
     # STABILITY LOGIC
     #############################################
     def check_stability_zone(self, line):
+        """ Check if the T3 value is within the stability zone.
+        This method will parse the line to extract the T3 value and check if it is within the stability zone.
+        It will also update the labels in the UI to indicate the stability status.
+
+        Args:
+            line (_type_):  Line received from the serial port.
+        """
         
         mt3e = re.search(r"t3\s*est:\s*([\d\.]+)", line)
         if not mt3e:
@@ -554,15 +654,6 @@ class SerialMonitor(QWidget):
             self.lbl_precision.setStyleSheet("color: green;")
             self.lbl_precision.setText(f"Precision: in zone.")
 
-        #elif in_zone_now and self.in_stable_zone:
-        #    # still in zone
-        #    elapsed = now - self.enter_time
-        #    self.lbl_precision.setStyleSheet("color: green;")
-        #    if elapsed >= 5 * 60:
-        #        # stable for 5 min
-        #        self.lbl_precision.setText(f"Precision: stable ≥ 5 min!, elapsed time : {elapsed} seconds.")
-        #    else:
-        #        self.lbl_precision.setText(f"Precision: in zone {int(elapsed)}s (need 300s).")
         else:
             self.lbl_precision.setText(f"Precision: Bad, need to be between : {lower} and {upper}.")
             self.in_precise_zone = False
@@ -591,7 +682,7 @@ class SerialMonitor(QWidget):
             self.lbl_stabilite.setStyleSheet("color: orange;")
             self.in_stable_zone = False
             self.time_counting = False
-               
+            
 
         if self.in_stable_zone and self.in_precise_zone and not self.time_counting:
             self.enter_time = now - 20
@@ -609,7 +700,12 @@ class SerialMonitor(QWidget):
                     
 
     def get_current_t3_est(self):
-        """Return the last T3 from temp_plot or fallback."""
+        """ Get the current T3_est value.
+        This method will return the last T3_est value from the plot data.
+
+        Returns:
+            float:  Current T3_est value or 25.0 if no values are available.
+        """
         if len(self.temp_plot.t3_est_values) > 0:
             return self.temp_plot.t3_est_values[-1]
         return 25.0
@@ -618,26 +714,39 @@ class SerialMonitor(QWidget):
     # UI Commands
     #############################################
     def send_play(self):
+        """ Send the play command to the serial port.
+        """
         self._send_line("p")
         self.send_param()
         self.btn_play.setStyleSheet("background-color: lightblue; color: white;")
         self.btn_play.setText("Update param")
 
     def send_stop(self):
+        """ Send the stop command to the serial port.
+        """
         self._send_line("S")
         self.btn_play.setStyleSheet("background-color: white; color: black;")
         self.btn_play.setText("Send and play")
 
     def handle_reset(self):
+        """ Handle the reset command.
+        This method will reset the plot data and send the reset command to the serial port.
+        """
         self.send_reset()
         self.temp_plot.reset_plot()
         self.cmd_plot.reset_plot()
         self.lbl_precision.setText("Stability: reset.")
 
     def send_reset(self):
+        """ Send the reset command to the serial port.
+        This method will send the reset command to the serial port and reset the plot data.
+        """
         self._send_line("PARAM C=25.0 I=1.0 K=0.5")
 
     def send_param(self):
+        """ Send the parameters to the serial port.
+        This method will read the parameters from the input fields and send them to the serial port.
+        """
         # 1) read new setpoint, recalc error
         con = float(self.input_con.text().strip())
         old_temp = self.get_current_t3_est()
@@ -661,11 +770,13 @@ class SerialMonitor(QWidget):
         self._send_line(cmd)
         self.excel_recorder.set_consigne(con)
 
-    #def send_raw_cmd(self):
-    #    raw_cmd = self.input_raw_cmd.text().strip()
-    #    self._send_line(raw_cmd)
-
     def _send_line(self, data_str):
+        """ Send a line to the serial port.
+        This method will encode the line and send it to the serial port.
+
+        Args:
+            data_str (string):  Line to send.
+        """
         if self.ser and self.ser.is_open:
             line = data_str + "\n"
             self.ser.write(line.encode('ascii', errors='ignore'))
@@ -675,6 +786,9 @@ class SerialMonitor(QWidget):
     # RECORDING
     #############################################
     def toggle_recording(self):
+        """ Toggle the recording state.
+        This method will start or stop the recording to the Excel file.
+        """
         if self.recording:
             self.recording = False
             self.excel_recorder.save_and_close()
@@ -695,6 +809,12 @@ class SerialMonitor(QWidget):
     # Cleanup
     #############################################
     def closeEvent(self, event):
+        """ Handle the close event for the main window.
+        This method will stop the serial reading thread and close the serial port.
+
+        Args:
+            event (event): event object for the close event.
+        """
         if hasattr(self, 'read_thread') and self.read_thread:
             self.read_thread.stop()
             self.read_thread.join()
@@ -706,19 +826,19 @@ class SerialMonitor(QWidget):
 
 
 def main():
-    app = QApplication(sys.argv)
-    window = SerialMonitor(port="COM9", baudrate=115200)
+    app = QApplication(sys.argv) #create the application
+    window = SerialMonitor(port="COM9", baudrate=115200) #create the main window
 
-    screen = app.primaryScreen().availableGeometry()
-    w = int(screen.width() * 0.95)
-    h = int(screen.height() * 0.95)
-    x = screen.x() + (screen.width() - w)//2
-    y = screen.y() + (screen.height() - h)//2
-    window.setGeometry(x, y, w, h)
+    screen = app.primaryScreen().availableGeometry() # Get the screen geometry
+    w = int(screen.width() * 0.95) # Set the width to 95% of the screen width
+    h = int(screen.height() * 0.95) # Set the height to 95% of the screen height
+    x = screen.x() + (screen.width() - w)//2 # Center the window horizontally
+    y = screen.y() + (screen.height() - h)//2 # Center the window vertically
+    window.setGeometry(x, y, w, h) # Set the window geometry
 
-    window.show()
-    sys.exit(app.exec_())
+    window.show() #show the main window
+    sys.exit(app.exec_()) #run the application
 
 
 if __name__ == "__main__":
-    main()
+    main()  
